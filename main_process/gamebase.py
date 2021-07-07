@@ -226,7 +226,7 @@ class RoleBase(object):
                 add_value = math.ceil(((max_hp+value)/max_hp-1)*hp)
                 if bl_recover:
                     add_value = max(value,add_value)
-                self.set_role_hp(value)
+                self.set_role_hp(add_value)
             elif value < 0:
                 # print("4")
                 # 降低上限,判断会不会超出下限0,之后向上取整
