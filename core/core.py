@@ -23,23 +23,48 @@ from db import *
 from func import *
 
 if __name__ == "__main__":
+    print("铁华团的战斗开始了！")
     pool = []
-    a = db_role.c0001.ROLE_c0001(r"阿方索")
-    b = db_role.c0001.ROLE_c0001(r"理查德")
-    c = db_role.c0001.ROLE_c0001(r"杰克曼")
+    a = db_role.c0001.ROLE_c0001(r"001")
+    b = db_role.c0001.ROLE_c0001(r"002")
+    c = db_role.c0001.ROLE_c0001(r"003")
+    a.set_role_str(50)
+    b.set_role_str(50)
+    a.nickname = r"夏亚"
+    b.nickname = r"团长"
+    c.nickname = r"杰哥"
     pool.append(a)
     pool.append(b)
     pool.append(c)
     
-    a0154 = db_act.a0154.ACTION_a0154()
-    a.status_current["round"]["ACTION"]=a0154
+    a.add_buff_status("CRITICAL",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
+    b.add_buff_status("LASTAND",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
+    a.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":50})
+    b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
+    b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
+    b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
+    b.add_buff_status("PIERCING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
     
+    #b.add_buff_status("BLIND",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_NEGATIVE":1})
+    #b.add_buff_status("EVADING",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_POSITIVE":1})
+    #b.add_buff_status("MUSTHIT",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_POSITIVE":1})
+    
+    a0154_1 = db_act.a0154.ACTION_a0154()
+    a0154_2 = db_act.a0154.ACTION_a0154()
+    a0066_1 = db_act.a0066.ACTION_a0066()
+    a.status_current["round"]["ROUND_ACTION"]=a0154_1
+    a.status_current["round"]["ROUND_TARGET"] = [b]
+    b.status_current["round"]["ROUND_ACTION"]=a0154_2
+    b.status_current["round"]["ROUND_TARGET"] = [a]
+    c.status_current["round"]["ROUND_ACTION"]=a0066_1
+    c.status_current["round"]["ROUND_TARGET"] = [a]
     a.status_current["basic"]["ROLE_SPD"]=154
     b.status_current["basic"]["ROLE_SPD"]=243
     c.status_current["basic"]["ROLE_SPD"]=174
     main_round(pool)
     
-    member = role_from_id("阿方索", pool)
+    """
+    member = get_role_from_id("001", pool)
     member.add_buff_status("TOXIC",100,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_NEGATIVE":1})
     member.add_buff_status("REGENERATION",20,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_NEGATIVE":1})
     member.add_buff_status("BURNING",3,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_NEGATIVE":1})
@@ -65,4 +90,4 @@ if __name__ == "__main__":
     #member.set_role_dur(-4)
     #print(member.get_role_dur())
     member.print_buff_status()
-    
+    """

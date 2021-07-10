@@ -33,7 +33,7 @@ class ROLE_c0001(RoleBase):
         basic = {}
         # ROLE_HP/MP/CORE/DUR/STR/INT/SPD/ARM
         if True:
-            # HP/MP/CORE/DUR/ARM 这些参数要设置两个，一个当前值一个最大值
+            # HP/MP/CORE/DUR/ARM 这些参数要设置两个,一个当前值一个最大值
             basic["ROLE_HP"] = 100
             basic["ROLE_MAX_HP"] = 100
             basic["ROLE_DUR"] = 6
@@ -47,6 +47,8 @@ class ROLE_c0001(RoleBase):
         
         # buff属性 直接初始化(调用函数初始化)
         self.init_buff_status()
+        # 初始化回合状态
+        self.init_round_status()
         
         # 角色当前状态(调用函数初始化)
         self.init_current_status()

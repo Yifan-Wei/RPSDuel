@@ -45,7 +45,8 @@ class ActionBase(object):
         self.ender_phase = False
         # 结束阶段执行内容(列表)
         self.content_ender_phase = []
-        
+    
+    
     def js_print(self):
         
         import json as js

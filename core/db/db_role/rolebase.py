@@ -9,7 +9,7 @@
 #       uptime: 2021/07/03
 #       content: create this file
 # -------------------------------------------------
-import gc
+import gc, math
 from copy import deepcopy
 
 # 调用独立出去的role函数, 包括字段的预留和结算
@@ -21,6 +21,8 @@ class RoleBase(object):
     
         # 角色二维码, 整局游戏唯一的身份标识
         self.id = ""
+        # 角色昵称
+        self.nickname = ""
         # 角色编号
         self.code = ""
         # 所属职业
@@ -92,9 +94,11 @@ class RoleBase(object):
         # 虽然感觉读一个表会更好,但目前暂时用手写的吧
         buff_list = []
         # 通用增益
-        # 按顺序: 格挡, 闪避, 穿甲, 必中, 暴击, 流失, 坚韧, 再生, 隐匿, 消隐
+        # 按顺序: 格挡, 格挡反击, 闪避, 闪避反击, 穿甲, 必中, 暴击, 流失, 坚韧, 再生, 隐匿, 消隐
         buff_list.append("DEFENDING")
+        buff_list.append("DEFENDING_BEATBACK")
         buff_list.append("EVADING")
+        buff_list.append("EVADING_BEATBACK")
         buff_list.append("PIERCING")
         buff_list.append("MUSTHIT")
         buff_list.append("CRITICAL")
@@ -125,7 +129,43 @@ class RoleBase(object):
         for buff in buff_list:
             self.status_default["buff"][buff] = []
 
-            
+    def init_round_status(self):
+        
+        # 初始化基础属性
+        round_list = []
+        # 按顺序: 回合目标, 回合行动, 回合当前交锋, 回合交过锋, 回合受到伤害, 回合施加过伤害
+        round_list.append("ROUND_TARGET")
+        round_list.append("ROUND_ACTION")
+        round_list.append("ROUND_IS_CONFRONTING")
+        round_list.append("ROUND_HAS_CONFRONTED")
+        round_list.append("ROUND_GET_HURT")
+        round_list.append("ROUND_DO_HARM")
+        
+        for string in round_list:
+            self.status_default["round"][string] = None
+           
+    
+    def get_role_str(self):
+        """
+        获取角色力量
+        """        
+        # 当前血量和生命上限
+        str = self.status_current["basic"]["ROLE_STR"]
+        return(str)
+    
+    def set_role_str(self, value):      
+        
+        # 当前力量
+        str = self.status_current["basic"]["ROLE_STR"]
+        
+        # 修改角色当前耐力
+        if value >= 0:
+            # 增强力量,判断会不会超出上限,之后向上取整
+            self.status_current["basic"]["ROLE_STR"] = math.ceil(str + value)
+        elif value < 0:
+            # 削弱力量,力量可以为负数,但结算伤害的时候伤害不能
+            self.status_current["basic"]["ROLE_DUR"] = math.ceil(str + value)
+    
     
     def get_role_hp(self,mode="now"):
         """
@@ -176,10 +216,9 @@ class RoleBase(object):
                 # 如果当前生命值大于上限, 则降低到上限
                 if hp>self.status_current["basic"]["ROLE_MAX_HP"]:
                     self.status_current["basic"]["ROLE_HP"]=self.status_current["basic"]["ROLE_MAX_HP"]
-                
-                
                 # 降低上限不会影响
-        print("生命值从{0}/{1}变更为{2}/{3}".format(hp,max_hp,self.status_current["basic"]["ROLE_HP"],self.status_current["basic"]["ROLE_MAX_HP"]))
+        
+        print("{4}的生命值从{0}/{1}变更为{2}/{3}".format(hp,max_hp,self.status_current["basic"]["ROLE_HP"],self.status_current["basic"]["ROLE_MAX_HP"],self.nickname))
     
     def get_role_dur(self,mode="now"):
         """
@@ -230,7 +269,7 @@ class RoleBase(object):
                 if hp>self.status_current["basic"]["ROLE_MAX_DUR"]:
                     self.status_current["basic"]["ROLE_DUR"]=self.status_current["basic"]["ROLE_MAX_DUR"]
     
-    
+        print("{4}耐力值从{0}/{1}变更为{2}/{3}".format(dur,max_dur,self.status_current["basic"]["ROLE_DUR"],self.status_current["basic"]["ROLE_MAX_DUR"],self.nickname))
     
     
     def get_buff_status(self, buff_string):
@@ -256,7 +295,7 @@ class RoleBase(object):
         注意, 不要让一个buff同时layer和anyway, 这样每次只会往第1个上面叠加
         """
 
-        # 叠加模式3选1，不然报错
+        # 叠加模式3选1,不然报错
         if not(add_mode=="layer" or add_mode=="refresh" or add_mode=="anyway"):
             print("add_mode error")
             return -1
@@ -280,11 +319,11 @@ class RoleBase(object):
                     if add_mode == "layer":
                         # 叠加, 碰到最大层数则返回最大层数
                         item["BUFF_LAYER"] = min(max_layer, layer + add_layer)
-                        print("- {0} BUFF 从{1}层 叠加到 {2}层".format(buff_string, layer, item["BUFF_LAYER"]))
+                        print("{3} - {0} BUFF 从{1}层 叠加到 {2}层".format(buff_string, layer, item["BUFF_LAYER"], self.nickname))
                     elif add_mode == "refresh":
                         # 刷新, 重置为两者中的较大值
                         item["BUFF_LAYER"] = max(layer, add_layer)
-                        print("- {0} BUFF 从{1}层 刷新到 {2}层".format(buff_string, layer, item["BUFF_LAYER"]))
+                        print("{3} - {0} BUFF 从{1}层 刷新到 {2}层".format(buff_string, layer, item["BUFF_LAYER"], self.nickname))
                         
                     # 跳出
                     del add_buff
@@ -297,7 +336,7 @@ class RoleBase(object):
         max_layer = add_buff["BUFF_MAX_LAYER"]
         add_buff["BUFF_LAYER"]=min(max_layer, add_layer)
         list.append(add_buff)
-        print("- 新增 {0} BUFF: {1}层".format(buff_string, add_buff["BUFF_LAYER"]))
+        print("{2} - 新增 {0} BUFF: {1}层".format(buff_string, add_buff["BUFF_LAYER"], self.nickname))
         return 1
          
     def rm_buff_status(self, buff_string, rm_layer, pool, rm_buff={}, rm_mode="SPECIFIC", bill_mode="BILL"):
@@ -305,7 +344,7 @@ class RoleBase(object):
         """
         这个函数是一个通用rm_buff函数,所有buff都应该调用这个函数来实现buff的卸载
         其中:
-        rm_buff = 待卸载函数的细节(默认为空，用来精细比对的)
+        rm_buff = 待卸载函数的细节(默认为空,用来精细比对的)
         rm_mode = "SPECIFIC" 移除字段下一致的所有buff/"ANYWAY"完全移除字段下所有buff
         bill_mode = "BILL"结算/"GATES"不结算
         
@@ -326,13 +365,13 @@ class RoleBase(object):
                 if is_buff_the_same(dut_buff=item, cmp_buff=rm_buff):
                     # 找到了, 调用一个在func里面的函数, 因为具体拿的过程和人物无关,且涉及复杂处理
                     rm_buff_status_from_dict(buff_string=buff_string, buff_list=list, buff=item, rm_layer=rm_layer, pool=pool, bill_mode=bill_mode)
-                    # 不跳出，记录当前移除
+                    # 不跳出,记录当前移除
                     remover = True
                     
             elif rm_mode == "ANYWAY":
                 # 强力清扫模式,不讨论是否一致,直接移除
                 rm_buff_status_from_dict(buff_string=buff_string, buff_list=list, buff=item, rm_layer=rm_layer, pool=pool, bill_mode=bill_mode)
-                # 不跳出，记录当前移除
+                # 不跳出,记录当前移除
                 remover = True
                 
         # 如果没找到,可能不太对,也可能是没找到东西,返回一个打印来提醒一下
@@ -410,6 +449,93 @@ class RoleBase(object):
                         string += ",它会随时间减弱"
                     print(string)
         print("#---------------------------------------------")
+    
+    
+    def is_buffed(self,buff_string):
+        """
+        判断角色是否处于特定buff状态
+        粗略判断, 只要有一个buff在,就算在状态
+        """
+        if len(self.status_current["buff"][buff_string])>0:
+            return True
+        return False
+    
+    def is_meeting_cost_condition(self):
+        """
+        暂时还没有什么功能能禁止你消耗的
+        不过未来可能有禁止消耗的东西吧
+        return True/False
+        """
+        return True
+    
+    def is_meeting_atk_condition(self):
+        """
+        为条件判断做的函数, 是否当前能攻击, 写成函数是为了固化判断
+        需要满足: 没有晕眩和缴械类的buff在身上
+        return: True/False
+        """
+        
+        if self.is_buffed("DISARMED") or self.is_buffed("STUNNED"):
+            return False
+        return True
+    
+    
+    def is_affected(self):
+        """
+        为伤害结算做的函数, 是否角色正处于战场
+        需要满足 不是消隐状态或者隐匿状态
+        """
+        if self.is_buffed("BLANKING") or self.is_buffed("CONCEALED"):
+            return False
+        return True
+        
+    
+    def is_unavoidable(self):
+        """
+        能够影响到不在战场上人物的状态
+        目前并不存在, 直接return False
+        """
+        return False
+    
+    
+    def is_evading(self):
+        """
+        判断单位是否处于闪避状态, 未来可能会有复数个闪避状态, 因此需要单独判断
+        """
+        if self.is_buffed("EVADING"):
+            return True
+        return False
+    
+    
+    def is_evading_ignoring(self):
+        """
+        判断单位是否无视闪避
+        具有必中和不可避免状态的人是无视闪避的
+        """
+        if self.is_buffed("MUSTHIT") or self.is_unavoidable():
+            return True
+        return False
+    
+    
+    def is_defending(self):
+        """
+        判断单位是否处于防御状态, 未来可能会有复数个防御状态
+        """
+        if self.is_buffed("DEFENDING"):
+            return True
+        return False
+    
+    
+    def is_defending_ignoring(self):
+        """
+        判断单位是否无视防御
+        具有穿甲和不可避免状态的人是无视闪避的
+        """
+        if self.is_buffed("PIERCING") or self.is_unavoidable():
+            return True
+        return False
+    
+    
     
     def js_print(self):
         
