@@ -133,10 +133,9 @@ class RoleBase(object):
         
         # 初始化基础属性
         round_list = []
-        # 按顺序: 回合目标, 回合行动, 回合当前交锋, 回合交过锋, 回合受到伤害, 回合施加过伤害
+        # 按顺序: 回合目标, 回合行动, 回合交过锋, 回合受到伤害, 回合施加过伤害
         round_list.append("ROUND_TARGET")
         round_list.append("ROUND_ACTION")
-        round_list.append("ROUND_IS_CONFRONTING")
         round_list.append("ROUND_HAS_CONFRONTED")
         round_list.append("ROUND_GET_HURT")
         round_list.append("ROUND_DO_HARM")
@@ -417,7 +416,7 @@ class RoleBase(object):
         
         # 获取需要操作的列表
         buff_dict = self.status_current["buff"]
-        print("#------------------BUFF状态-------------------")
+        print("#------------{}的BUFF状态--------------".format(self.nickname))
         for buff_key, buff_value_list in buff_dict.items():
             #print(buff_key)
             #print(len(buff_value_list))
@@ -456,8 +455,9 @@ class RoleBase(object):
         判断角色是否处于特定buff状态
         粗略判断, 只要有一个buff在,就算在状态
         """
-        if len(self.status_current["buff"][buff_string])>0:
-            return True
+        if buff_string in self.status_current["buff"]:
+            if len(self.status_current["buff"][buff_string])>0:
+                return True
         return False
     
     def is_meeting_cost_condition(self):
@@ -500,41 +500,38 @@ class RoleBase(object):
     
     def is_evading(self):
         """
-        判断单位是否处于闪避状态, 未来可能会有复数个闪避状态, 因此需要单独判断
+        判断单位是否处于闪避状态, 未来可能会有复数个该类状态, 因此需要单独判断
         """
         if self.is_buffed("EVADING"):
             return True
         return False
     
     
-    def is_evading_ignoring(self):
+    def is_evading_beatback(self):
         """
-        判断单位是否无视闪避
-        具有必中和不可避免状态的人是无视闪避的
+        判断单位是否处于闪避反击状态, 未来可能会有复数个该类状态, 因此需要单独判断
         """
-        if self.is_buffed("MUSTHIT") or self.is_unavoidable():
+        if self.is_buffed("EVADING_BEATBACK"):
             return True
         return False
     
-    
+
     def is_defending(self):
         """
-        判断单位是否处于防御状态, 未来可能会有复数个防御状态
+        判断单位是否处于防御状态, 未来可能会有复数个该类状态, 因此需要单独判断
         """
         if self.is_buffed("DEFENDING"):
             return True
         return False
     
     
-    def is_defending_ignoring(self):
+    def is_defending_beatback(self):
         """
-        判断单位是否无视防御
-        具有穿甲和不可避免状态的人是无视闪避的
+        判断单位是否处于防御反击状态, 未来可能会有复数个该类状态, 因此需要单独判断
         """
-        if self.is_buffed("PIERCING") or self.is_unavoidable():
+        if self.is_buffed("DEFENDING_BEATBACK"):
             return True
         return False
-    
     
     
     def js_print(self):

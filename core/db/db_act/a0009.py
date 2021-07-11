@@ -11,32 +11,30 @@
 # -------------------------------------------------
 from db.db_act.actionbase import ActionBase
 
-class ACTION_a0066(ActionBase):
+class ACTION_a0009(ActionBase):
 
     def __init__(self):
         
         # 继承父类构造
         ActionBase.__init__(self)
         # 行动编号,需要与文件名一致
-        self.code = r"a0066"
+        self.code = r"a0009"
         # 行动名,随便写,不是关键字
-        self.name = r"枭首"
+        self.name = r"防御反击"
         # 所属职业
         self.job = r"战士"
         # 所属流派
-        self.stream = r"武士"
+        self.stream = r"通用"
         # 具体类型：UNLOCK/LOCK锁定
-        self.type = "LOCK"
+        self.type = "UNLOCK"
         # 稀有度
-        self.rarity = "HEROIC"
+        self.rarity = "NORMAL"
 
         # ---------------------------------------------
         # 通用技能消耗条件
-        self.act_condition["COM_COST_COND"]= 1
+        self.act_condition["COM_COST_COND"] = 1
         # 通用技能消耗条件
-        self.act_condition["DUR_COST"] = 3
-        # 需要满足耐力大于等于目标耐力+3
-        self.act_condition["DUR_ABOVE_TARGET"] = 3
+        self.act_condition["DUR_COST"] = 2
         # ......
 
         # ----------------------------------------------
@@ -60,36 +58,9 @@ class ACTION_a0066(ActionBase):
         # self.content_order_phase = []
         # STEP 1
         # STEP 1 TYPE
-        if True:
-            step = {}
-            step["harmful"] = True
-        # STEP 1 condition
-        if True:
-            step_condition = {}
-            step_condition["COM_ATK_COND"]= 1
-            step["condition"] = step_condition
-        # STEP1 CONTENT
-        if True:
-            step_content = {}
-            # STEP 1 harm
-            if True:
-                harm = {}
-                harm["HARM_CONST"] = 0
-                harm["HARM_VARIANT"] = {"ROLE_STR": 1.0}
-                step_content["HARM_INFLICT"] = harm
-            # STEP 1 if_hit
-            if True:
-                if_hit = {}
-                step_content["IF_HIT"] = if_hit
-            # STEP 1 if_harm
-            if True:
-                if_harm = {}
-                if_harm["DEBUFF_BEHEAD"] = 1
-                step_content["IF_HARM"] = if_harm    
-        step["content"] = step_content
-            
+        step = {}
+        step["harmful"]:False
         self.content_order_phase.append(step)
-        # STEP 2
         # ......
 
         # ----------------------------------------------
@@ -104,5 +75,5 @@ class ACTION_a0066(ActionBase):
         self.content_ender_phase.append(step)
         
 if __name__ == "__main__":
-    a = ACTION_a0066()
+    a = ACTION_a0009()
     a.js_print()

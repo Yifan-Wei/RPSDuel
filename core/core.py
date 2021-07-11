@@ -37,29 +37,33 @@ if __name__ == "__main__":
     pool.append(b)
     pool.append(c)
     
-    a.add_buff_status("CRITICAL",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
-    b.add_buff_status("LASTAND",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
-    a.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":50})
-    b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
-    b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
-    b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
-    b.add_buff_status("PIERCING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
+    a.add_buff_status("CRITICAL",1,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
     
-    #b.add_buff_status("BLIND",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_NEGATIVE":1})
+    b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":25})
+    b.add_buff_status("DEFENDING_BEATBACK",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
+    
+    
+    #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
+    #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
+    #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
+    #b.add_buff_status("PIERCING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
+    
+    b.add_buff_status("BLIND",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_NEGATIVE":1})
     #b.add_buff_status("EVADING",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_POSITIVE":1})
     #b.add_buff_status("MUSTHIT",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_POSITIVE":1})
     
-    a0154_1 = db_act.a0154.ACTION_a0154()
-    a0154_2 = db_act.a0154.ACTION_a0154()
+    a0009_1 = db_act.a0009.ACTION_a0009()
     a0066_1 = db_act.a0066.ACTION_a0066()
+    a0154_1 = db_act.a0154.ACTION_a0154()
+    
     a.status_current["round"]["ROUND_ACTION"]=a0154_1
     a.status_current["round"]["ROUND_TARGET"] = [b]
-    b.status_current["round"]["ROUND_ACTION"]=a0154_2
-    b.status_current["round"]["ROUND_TARGET"] = [a]
+    b.status_current["round"]["ROUND_ACTION"]=a0009_1
+    b.status_current["round"]["ROUND_TARGET"] = []
     c.status_current["round"]["ROUND_ACTION"]=a0066_1
     c.status_current["round"]["ROUND_TARGET"] = [a]
     a.status_current["basic"]["ROLE_SPD"]=154
-    b.status_current["basic"]["ROLE_SPD"]=243
+    b.status_current["basic"]["ROLE_SPD"]=100
     c.status_current["basic"]["ROLE_SPD"]=174
     main_round(pool)
     

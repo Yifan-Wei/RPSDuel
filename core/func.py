@@ -68,7 +68,7 @@ def main_round(input_pool):
     order = 0
     # 大循环: 直到所有order都被结算完成
     while not(is_order_phase_end):
-        print("-------------战斗阶段第{0}顺序轮-----------".format(order+1))
+        print("-------------第{0}战斗轮-----------".format(order+1))
         
         # 为了防止结算的时候要再判断一次交锋生效性
         # 先进行一次快速判断
@@ -77,8 +77,9 @@ def main_round(input_pool):
             step = get_step_in_order_phase_from_role(role, order)
             if not(step==None):
                 # 首先确定行动条件
+                condition = None
                 if "condition" in step.keys():
-                    condition = step["condition"]   
+                    condition = step["condition"]
                 # 先判断条件是否成立, 这里不成立的话, 本次step的行动清空
                 if not(is_qualified_to_act(role=role, condition=condition)):
                     action.content_order_phase[order] = {}
@@ -146,6 +147,9 @@ def main_round(input_pool):
     # 结束阶段
     for role in pool:
         pass
-        
-        
+    
+    # buff循环阶段
+    for role in pool:
+        role.iter_buff_status(pool)
+        role.print_buff_status()
         

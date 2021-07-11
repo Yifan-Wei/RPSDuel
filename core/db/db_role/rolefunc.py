@@ -39,7 +39,6 @@ def get_step_in_order_phase_from_role(role, order):
     """
     # 初始化
     step = None
-    
     # 获取action
     action = get_action_from_role(role)
     # 如果action存在
@@ -54,6 +53,34 @@ def get_step_in_order_phase_from_role(role, order):
     #返回结果
     return step
 
+def set_step_in_order_phase_from_role(role, order, step):
+    """
+    设置行动在顺序阶段第order轮的步骤(任意设置)
+    role 角色结构体
+    step 要设置的步骤
+    order 第X步
+    """
+    # 获取action
+    action = get_action_from_role(role)
+    # 如果action存在
+    if not(action==None):
+        # 如果action的顺序阶段不是默认跳过的
+        if action.order_phase:
+            # 先获取当前有几个step
+            step_num = len(action.content_order_phase)-1
+            if order > step_num:
+                # 循环整数赋值
+                ii = 0
+                # 要先append order-step_num-1个空字典
+                for ii in range(order-step_num-1):
+                    action.content_order_phase.append({})
+                action.content_order_phase.append(step)
+            else:
+                action.content_order_phase[order]=step
+            # 返回设置成功
+            return True
+    #返回结果
+    return False
 
 def set_action_from_role(role, action):
     
@@ -234,7 +261,92 @@ def rm_buff_status_from_dict(buff_string, buff_list, buff, rm_layer, pool, billm
         
         # 循环变量
         iter_layer -= 1
-        
+
+
+def trig_buff_evade_beatback(role, target, value=0, order=0):
+    
+    return
+
+
+def trig_buff_defend_beatback(role, target, value=0, order=0):
+    
+    """
+    触发防御反击, 整体流程还比较复杂, 单开一个函数
+    role: 防御方
+    target: 防反方
+    """
+    # 查询是否处于防御反击状态, 如否, 直接跳出
+    if not(role.is_defending_beatback()):
+        return
+    
+    # 防御反击将角色当前轮目标重置为target目标
+    role.status_current["round"]["ROUND_TARGET"]=[target]
+    
+    # --------------------------------------------------
+    # 初始化伤害列表中字典
+    step = {}
+    step_condition = {}
+    step_content = {}
+    harm = {}
+    if_hit = {}
+    if_harm = {}
+    if_missed = {}
+    if_defended = {}
+    if_blocked = {}
+    # 排优先级
+    # 按顺序是 巨剑-防御轮-反击, (普通)防御-反击
+    # GIANT_WHEEL_DEFENDING_BEATBACK
+    if role.is_buffed("GIANT_WHEEL_DEFENDING_BEATBACK"):
+        # 获取buff列表
+        buff_list_1 = role.status_current["buff"]["GIANT_WHEEL_DEFENDING"]
+        buff_list_2 = role.status_current["buff"]["GIANT_WHEEL_DEFENDING_BEATBACK"]
+        # 书写step中的伤害结构体
+        harm["HARM_CONST"] = 10
+        harm["HARM_VARIANT"] = {"ROLE_STR": 1.0}
+    # DEFENDING_BEATBACK
+    elif role.is_buffed("DEFENDING_BEATBACK"):
+        # 获取buff列表
+        buff_list_1 = role.status_current["buff"]["DEFENDING"]
+        buff_list_2 = role.status_current["buff"]["DEFENDING_BEATBACK"]
+        # 书写step中的伤害结构体
+        harm["HARM_CONST"] = value * 0.5
+        harm["HARM_VARIANT"] = {}
+    # --------------------------------------------------
+    
+    # 结算buff
+    # 一旦决定出手, 就丢掉身上的所有当前的格挡和防御反击 (目前只有这种逻辑)
+    for buff in buff_list_1[::-1]: 
+        buff_list_1.remove(buff)
+    for buff in buff_list_2[::-1]:
+        buff_list_2.remove(buff)
+    
+    # --------------------------------------------------
+    # step = {"harmful":True, "condition"={}, "content":{}}
+    # content = {"HARM_INFLICT":harm, "IF_HIT":None, "IF_HURT":None}
+    # --------------------------------------------------
+    # 增加的反击动作
+    # 未来也许保不准有反击多次的, 倒时候再说
+    # STEP: harmful
+    step["harmful"] = True
+    # STEP condition
+    step["condition"] = step_condition
+    step_condition["COM_ATK_COND"]= 1
+    # STEP: CONTENT
+    step_content["HARM_INFLICT"] = harm
+    # STEP: step_if_content
+    step_content["IF_HIT"] = if_hit
+    step_content["IF_HARM"] = if_harm
+    step_content["IF_MISSED"] = if_missed
+    step_content["IF_DEFENDED"] = if_defended
+    step_content["IF_BLOCKED"] = if_blocked
+    step["content"] = step_content
+    # --------------------------------------------------
+    # 总共有两种情况, 一种是已经空过结算, 一种是还没来得及结算
+    # 自定义函数能够插入空过值, 因此不必单独判断了, 直接在order+1插入反击
+    set_step_in_order_phase_from_role(role=role, order=order+1, step=step)
+    string = "{0}将对{1}在第{2}战斗轮反击".format(role.nickname, target.nickname, order+2) 
+    print(string)
+    return
     
         
 def is_qualified_to_act(role, condition={}):
@@ -244,6 +356,9 @@ def is_qualified_to_act(role, condition={}):
     condition: 判断条件, 是个字典
     return True/False
     """
+    # 没条件 空过
+    if condition==None:
+        return True
     
     # 这个函数放在这里是因为涉及多种条件罗列和判断,没办法写在role/action里面
     # 这个函数如果明确调用了函数,暂时都是rolebase里面的函数
@@ -329,6 +444,86 @@ def is_qualified_to_act(role, condition={}):
     return True 
 
 
+def exert_effect(role, target, spell_effect={}):
+    
+    """
+    施加buff函数
+    输入一个命令字典, 来把各种效果处理掉, 包括且不仅限于buff
+    """
+    # ---------------------快速跳出-------------------------
+    # 外面不加其他判断了, 如果输入进来的是None type, 直接跳出
+    if spell_effect==None:
+        return
+    # 字典为空, 也直接跳出
+    if not(bool(spell_effect)):
+        return
+    # ------------------------------------------------------  
+    
+    # ---------------------循环遍历-------------------------
+    for key, value in spell_effect.items():
+        
+        # -----------------常规字段-------------------------
+        # 恢复耐力
+        if key == "DUR_REC":
+            role.set_role_dur(value)
+            continue
+        # 恢复生命
+        if key == "HP_REC":
+            role.set_role_hp(value)
+            continue
+        # 提升力量
+        if key == "STR_REC":
+            role.set_role_str(value)
+            continue
+        # --------------------------------------------------
+        
+        
+        
+        # ----------------施加buff--------------------------
+        # 增益buff
+        # 按顺序: 格挡, 格挡反击, 闪避, 闪避反击, 穿甲, 必中, 暴击, 流失, 坚韧, 再生, 隐匿, 消隐
+        # 获得格挡
+        if key == "GET_BUFF_DEFENDING":
+            buff = {}
+            full_empty_buff(buff)
+            buff["BUFF_SOURCE"].append(role.id)
+            buff["BUFF_TARGET"].append(role.id)
+            buff["BUFF_IS_POSITIVE"] = 1
+            buff["BUFF_IS_DISPELLABLE"] = 0
+            buff["BUFF_LAYER"] = 1
+            buff["BUFF_VALUE"] = value
+            role.add_buff_status(buff_string="DEFENDING", add_layer=1, add_buff=buff, add_mode="anyway")
+            continue
+        # 获得闪避
+        if key == "GET_BUFF_EVADING":
+            buff = {}
+            full_empty_buff(buff)
+            buff["BUFF_SOURCE"].append(role.id)
+            buff["BUFF_TARGET"].append(role.id)
+            buff["BUFF_IS_POSITIVE"] = 1
+            buff["BUFF_IS_DISPELLABLE"] = 0
+            buff["BUFF_LAYER"] = 1
+            role.add_buff_status(buff_string="EVADING", add_layer=1, add_buff=buff, add_mode="refresh")
+            continue
+
+        # --------------------------------------------------
+        # 减益buff
+        # 按顺序: 致盲, 虚弱, 重创, 灼烧, 中毒, 诅咒, 幻惑, 缴械, 沉默, 眩晕
+        # 给予中毒
+        if key == "EXERT_BUFF_TOXIC":
+            buff = {}
+            full_empty_buff(buff)
+            buff["BUFF_SOURCE"].append(role.id)
+            buff["BUFF_TARGET"].append(target.id)
+            buff["BUFF_IS_NEGATIVE"] = 1
+            buff["BUFF_LAYER"] = value
+            target.add_buff_status(buff_string="TOXIC", add_layer=value, add_buff=buff, add_mode="layer")
+            continue
+        
+    # ------------------------------------------------------
+    return
+
+
 def get_hit_result(role, target):
     
     """
@@ -395,7 +590,7 @@ def get_harm_result(role, target, value):
     """
     # 结果初始化
     harm_result = value
-    is_defending = False
+    is_harm_defended = False
     defend_index = 0
     string = "%格挡%"
     
@@ -404,7 +599,7 @@ def get_harm_result(role, target, value):
         defend_buff_list = target.status_current["buff"]["DEFENDING"]
         for buff in defend_buff_list[::-1]:
             # 是否产生过至少一次抵挡:
-            is_defending = True
+            is_harm_defended = True
             # 叠加格挡因素
             defend_index += buff["BUFF_VALUE"]
             # 如果累积的格挡已经超过了伤害值, 跳出
@@ -419,7 +614,7 @@ def get_harm_result(role, target, value):
         # 但是没作用上来的甲, 这里先不考虑
         defend_index = 0
         # 因为穿甲了, 等于没抵挡
-        is_defending = False
+        is_harm_defended = False
         string += "但{0}的攻击穿透护甲,".format(role.nickname)
     
     # 出结果
@@ -427,7 +622,7 @@ def get_harm_result(role, target, value):
     harm_result = max(0, harm_result)
     string += "{0}要对{1}造成{2}点税前伤害".format(role.nickname, target.nickname, harm_result)
     print(string)
-    return harm_result, is_defending
+    return harm_result, is_harm_defended
     
 
 def trig_harm(damager, victim, value, extra={}):
@@ -445,7 +640,6 @@ def trig_harm(damager, victim, value, extra={}):
             
     
     # 被伤害端
-    victim.status_current["round"]["ROUND_GET_HURT"] = True
     if victim.nickname == r"夏亚":
         print("夏亚: 还没有结束呢！")
     elif victim.nickname == r"团长":
@@ -506,11 +700,11 @@ def give_harm(role, target, value, extra={}):
     # 伤害触发器, 在两端触发操作
     trig_harm(damager=role, victim=target, value=real_harm)
        
-  
+
 def cal_damage(role, content={}, order=0):
     
     """
-    damage伤害 = harm数值伤害 + buff伤害
+    cal_damage计算伤害 = give_harm给予数值伤害 + exert_effect给予技能额外效果
     action = get_action_from_role()
     action.order_phase = True
     action.content_order_phase = [step1,step2,step3...]
@@ -550,21 +744,29 @@ def cal_damage(role, content={}, order=0):
                 if v_key == "ROLE_HP":
                     harm_value += role.get_role_hp() * v_value
         # 算完了
-        # print(harm_value)
-        
-    # 如果命中的字典
+        print("此战斗轮{0}技能的初始伤害是{1}".format(role.nickname,harm_value))
+    # --------------------------------------  
+    # 如果命中的技能效果
     if_hit = None
     if "IF_HIT" in content.keys():
         if_hit = content["IF_HIT"]
-    # 如果造成伤害的字典
+    # 如果丢失的技能效果
+    if_missed = None
+    if "IF_MISSED" in content.keys():
+        if_missed= content["IF_MISSED"]
+    # 如果被防御的技能效果
+    if_defended = None
+    if "IF_DEFENDED" in content.keys():
+        if_defended= content["IF_DEFENDED"]
+    # 如果造成伤害的技能效果
     if_harm = None
     if "IF_HARM" in content.keys():
         if_harm = content["IF_HARM"]
-    # 如果被防御的字典
-    if_defend = None
-    if "IF_DEFEND" in content.keys():
-        if_defend = content["IF_DEFEND"]
-    
+    # 如果被完全抵挡的技能效果
+    if_blocked = None
+    if "IF_BLOCKED" in content.keys():
+        if_blocked = content["IF_BLOCKED"]
+    # 可能还有其他触发的技能效果, 之后再看
     # --------------------------------------
     #|#
     #|#
@@ -577,7 +779,9 @@ def cal_damage(role, content={}, order=0):
         is_harm_hit = False
         is_harm_hurt = False
         is_confronting = False
-        
+        is_harm_defended = False
+        harm_value_after_defending = 0
+        print("---------------------")
         print("{0}攻击{1}".format(role.nickname, target.nickname))
         
         # --------------------------------------
@@ -595,6 +799,8 @@ def cal_damage(role, content={}, order=0):
                 if (target_step["harmful"]) and (role in target_target_list):
                     # 交锋: 如果目标的锁定了我, 且要造成伤害
                     is_confronting = True
+                    # 回合指示器在这里处理
+                    role.status_current["round"]["ROUND_HAS_CONFRONTED"] = True
                     print("{0}与{1}交锋".format(role.nickname, target.nickname))
         # --------------------------------------
         
@@ -603,33 +809,74 @@ def cal_damage(role, content={}, order=0):
         # 对隐匿/消隐的判断
         if target.is_affected() or role.is_unavoidable():
             # True or False/ False or True/ True or True
-            
-            # 判断是否命中对方
+            # 判断是否命中对方 (获得是否命中)
             is_harm_hit = get_hit_result(role=role,target=target)
-            # 判断是否伤害对方
-            harm_value, is_defending = get_harm_result(role=role,target=target,value=harm_value)
-            if harm_value >0:
-                is_harm_hurt = True
+            
+            # 只有命中才判断格挡
+            if is_harm_hit:
+                # 判断伤害结果 (获得格挡后的伤害值, 是否发生格挡)
+                harm_value_after_defending, is_harm_defended = get_harm_result(role=role,target=target,value=harm_value)
+                
+                # 判断是否伤害对方 (伤害值大于0)
+                if harm_value_after_defending >0:
+                    is_harm_hurt = True
         # --------------------------------------
         
-        
-        # 判断完成, 开始正式处理
+        # --------------------------------------
+        # 判断完成, 开始正式处理我方增益
         if is_harm_hit:
-            # 命中了
-            # 结算IF_HIT
-            # IF_HIT
+            # 命中对方
+            # 结算技能的命中后效果if_hit
+            exert_effect(role=role,target=target,spell_effect=if_hit)
+            # 结算技能的被格挡后效果if_defended
+            exert_effect(role=role,target=target,spell_effect=if_defended)
+            # 结算伤害
             if is_harm_hurt:
-                # 有伤害
+                # 攻击造成伤害
                 print("******伤害阶段******")
-                give_harm(role=role,target=target, value=harm_value, extra={"is_confronting":is_confronting})
-                # 结算IF_HARM
-                # IF_HARM
+                # 给实际伤害 
+                # 函数中包含对给予/受到伤害时的通用调用(吸血等, 这类不包含在技能中)
+                give_harm(role=role,target=target, value=harm_value_after_defending, extra={"is_confronting":is_confronting})
+                # 结算技能的伤害后效果IF_HARM
+                exert_effect(role=role,target=target,spell_effect=if_harm)
+                # 回合指示器
+                role.status_current["round"]["ROUND_DO_HARM"] = True
+            else:
+                # 攻击被完全格挡
+                exert_effect(role=role,target=target,spell_effect=if_blocked)
         else:
-            # 没命中
-            continue
+            # 攻击丢失
+            # 结算攻击丢失后的效果if_missed
+            exert_effect(role=role,target=target,spell_effect=if_missed)
         
         
+        # 正式处理对方带有trigger的buff/debuff效果
+        # 这类效果包括防御反击, 闪避反击等
+        # 如果被命中
+        if is_harm_hit:
+            pass
+        else:
+            # 闪避反击在这里处理
+            trig_buff_evade_beatback(role=target,target=role,value=harm_value,order=order)
         
+        # 如果成功完成防御
+        if is_harm_defended:
+            # 防御反击在这里处理
+            trig_buff_defend_beatback(role=target,target=role,value=harm_value,order=order)
+        else:
+            pass
+        
+        # 如果被造成伤害
+        if is_harm_hurt:
+            # 伤害反击
+            #|# 不确定是否未来会有这个buff
+            # 回合指示器
+            target.status_current["round"]["ROUND_GET_HURT"] = True
+        else:
+            pass
+        
+        
+        print("******结算完毕******")
         
         
         
