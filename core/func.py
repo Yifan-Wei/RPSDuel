@@ -52,15 +52,21 @@ def main_round(input_pool):
     
     # 起始阶段
     for role in pool[::-1]:
-        """
-        # 开始行动
-        action = get_action_from_role(role=role)
-        # 在起始阶段
-        if not(action==None) and (action.start_phase):
-            # 如果有行动, 且行动有起始阶段, 继续
-            for content in action.content_start_phase:
-                pass
-        """
+        # 获取该阶段step_list
+        step_list = get_step_list_in_start_phase_from_role(role=role)
+        if not(step_list==None):
+            for step in step_list:
+                # 首先确定行动条件
+                step_condition = None
+                step_content = None
+                if "condition" in step.keys():
+                    step_condition = step["condition"]
+                if "content" in step.keys():
+                    step_content = step["content"]
+                # 先判断条件是否成立, 这里不成立的话, 本次step不进行
+                if is_qualified_to_act(role=role, condition=step_condition):
+                    # 施加效果
+                    exert_effect(role=role, step_content=step_content)
         
     # 顺序阶段
     # 顺序阶段是有顺序的, 按照顺序来排
@@ -75,15 +81,16 @@ def main_round(input_pool):
         for role in pool[::-1]:
             # 开始判断
             step = get_step_in_order_phase_from_role(role, order)
+            # print("{0} - {1}".format(role.nickname,step))
             if not(step==None):
                 # 首先确定行动条件
-                condition = None
+                step_condition = None
                 if "condition" in step.keys():
-                    condition = step["condition"]
+                    step_condition = step["condition"]
                 # 先判断条件是否成立, 这里不成立的话, 本次step的行动清空
-                if not(is_qualified_to_act(role=role, condition=condition)):
-                    action.content_order_phase[order] = {}
-        
+                if not(is_qualified_to_act(role=role, condition=step_condition)):
+                    # 清空
+                    set_step_in_order_phase_from_role(role=role, order=order, step={})
         
         # 正式开始结算, 预设所有人都能动
         number_of_no_action_role = 0
@@ -100,22 +107,22 @@ def main_round(input_pool):
                     
                     # 获取行动字典step
                     step = action.content_order_phase[order]
+                    # print("{0} # {1}".format(role.nickname,step))
                     
-                    # 首先看一眼行动字典是什么内容
-                    if "condition" in step.keys():
-                        step_condition = step["condition"]
+                    # 首先看一眼行动字典是什么内容, 其中条件已经不用看了
+                    # 略过step_condition=step["condition"]
                     if "harmful" in step.keys():
                         step_harmful = step["harmful"]
                     if "content" in step.keys():
                         step_content = step["content"]
-                    
+                        # 有内容的前提下继续操作
                         if step_harmful:
                             # 本次动作涉及到伤害
                             # 调用函数damage_calculation
                             damage_result = cal_damage(role=role, content=step_content, order=order)
                         else:
-                            # 本次动作不涉及到伤害
-                            pass
+                            # 本次行动不涉及到伤害
+                            exert_effect(role=role, step_content=step_content)
                 else:
                     # 对于一些处于等待触发的状态, 即使没有行动, 也不能断定下个回合没有行动
                     # 一个解决办法就是往等待触发的状态里面塞空字典
@@ -140,16 +147,44 @@ def main_round(input_pool):
         else:
             print("********************")
             order += 1
+        
     
-    print("----------顺序阶段结束, 共{0}轮--------".format(order))   
+    print("----------战斗阶段结束, 共{0}轮--------".format(order))   
         
         
     # 结束阶段
-    for role in pool:
-        pass
+    for role in pool[::-1]:
+        # 获取该阶段step_list
+        step_list = get_step_list_in_ender_phase_from_role(role=role)
+        if not(step_list==None):
+            for step in step_list:
+                # 首先确定行动条件
+                step_condition = None
+                step_content = None
+                if "condition" in step.keys():
+                    step_condition = step["condition"]
+                if "content" in step.keys():
+                    step_content = step["content"]
+                # 先判断条件是否成立, 这里不成立的话, 本次step不进行
+                if is_qualified_to_act(role=role, condition=step_condition):
+                    # 施加效果
+                    exert_effect(role=role, step_content=step_content)
+            
     
     # buff循环阶段
-    for role in pool:
+    for role in pool[::-1]:
         role.iter_buff_status(pool)
         role.print_buff_status()
+        
+        
+    # 死亡结算阶段
+    for role in pool[::-1]:
+        if not(role.is_role_alive()):
+            pool.remove(role)
+            print("{0}因为死亡, 已经被从战斗中移出".format(role.nickname))
+    
+    
+    return pool
+        
+        
         

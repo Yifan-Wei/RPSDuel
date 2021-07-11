@@ -28,8 +28,10 @@ if __name__ == "__main__":
     a = db_role.c0001.ROLE_c0001(r"001")
     b = db_role.c0001.ROLE_c0001(r"002")
     c = db_role.c0001.ROLE_c0001(r"003")
-    a.set_role_str(50)
-    b.set_role_str(50)
+    a.set_role_str(value=50)
+    b.set_role_str(value=50)
+    a.set_role_dur(value=-3)
+    b.set_role_dur(value=-3)
     a.nickname = r"夏亚"
     b.nickname = r"团长"
     c.nickname = r"杰哥"
@@ -38,9 +40,9 @@ if __name__ == "__main__":
     pool.append(c)
     
     a.add_buff_status("CRITICAL",1,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
-    
-    b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":25})
-    b.add_buff_status("DEFENDING_BEATBACK",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
+
+    #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":25})
+    #b.add_buff_status("DEFENDING_BEATBACK",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
     
     
     #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
@@ -57,11 +59,12 @@ if __name__ == "__main__":
     a0154_1 = db_act.a0154.ACTION_a0154()
     
     a.status_current["round"]["ROUND_ACTION"]=a0154_1
-    a.status_current["round"]["ROUND_TARGET"] = [b]
     b.status_current["round"]["ROUND_ACTION"]=a0009_1
-    b.status_current["round"]["ROUND_TARGET"] = []
     c.status_current["round"]["ROUND_ACTION"]=a0066_1
-    c.status_current["round"]["ROUND_TARGET"] = [a]
+    a.set_round_target([b])
+    b.set_round_target([])
+    c.set_round_target([a])
+    exert_effect(role=c,step_content={"EXERT_BUFF_BEHEAD":1})
     a.status_current["basic"]["ROLE_SPD"]=154
     b.status_current["basic"]["ROLE_SPD"]=100
     c.status_current["basic"]["ROLE_SPD"]=174

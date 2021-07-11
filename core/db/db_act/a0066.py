@@ -84,7 +84,7 @@ class ACTION_a0066(ActionBase):
             # STEP 1 if_harm
             if True:
                 if_harm = {}
-                if_harm["DEBUFF_BEHEAD"] = 1
+                if_harm["EXERT_BUFF_BEHEAD"] = 1
                 step_content["IF_HARM"] = if_harm    
         step["content"] = step_content
             

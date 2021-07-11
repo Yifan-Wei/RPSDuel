@@ -102,6 +102,8 @@ class ACTION_a0154(ActionBase):
         step["harmful"]:False
         self.content_ender_phase.append(step)
         
+        #print(self.content_order_phase)
+        
 if __name__ == "__main__":
     a = ACTION_a0154()
     a.js_print()

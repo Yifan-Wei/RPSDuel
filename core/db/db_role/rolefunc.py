@@ -32,6 +32,25 @@ def get_action_from_role(role):
     else:
         return None 
 
+
+def get_step_list_in_start_phase_from_role(role):
+    """
+    获取目标在起始阶段的step_list
+    没有返回None
+    """
+    # 初始化
+    step_list = None
+    # 获取action
+    action = get_action_from_role(role)
+    # 如果action存在
+    if not(action==None):
+        # 如果action的顺序阶段不是跳过的
+        if action.start_phase:
+            step_list = action.content_start_phase
+    #返回结果
+    return step_list
+
+
 def get_step_in_order_phase_from_role(role, order):
     """
     获取目标在顺序阶段第order轮的行动
@@ -81,6 +100,24 @@ def set_step_in_order_phase_from_role(role, order, step):
             return True
     #返回结果
     return False
+
+
+def get_step_list_in_ender_phase_from_role(role):
+    """
+    获取目标在结束阶段的step_list
+    没有返回None
+    """
+    # 初始化
+    step_list = None
+    # 获取action
+    action = get_action_from_role(role)
+    # 如果action存在
+    if not(action==None):
+        # 如果action的顺序阶段不是跳过的
+        if action.ender_phase:
+            step_list = action.content_ender_phase
+    #返回结果
+    return step_list
 
 def set_action_from_role(role, action):
     
@@ -183,7 +220,6 @@ def rm_buff_status_from_dict(buff_string, buff_list, buff, rm_layer, pool, billm
     千万要倒序!
     因为要删除列表内容, 正着遍历就会把后面那个跳过了
     
-    
     拔除的时候需要处理的步骤比较多,单独分了个函数出来, 这个函数包含所有的特殊处理
     这个函数放在func而不是放在结构体的方法里面, 是因为里面的判断很多, 单独拿出来更好
     后续看看这个是否能移动到其他地方
@@ -279,8 +315,10 @@ def trig_buff_defend_beatback(role, target, value=0, order=0):
     if not(role.is_defending_beatback()):
         return
     
-    # 防御反击将角色当前轮目标重置为target目标
-    role.status_current["round"]["ROUND_TARGET"]=[target]
+    # 防御反击将角色当前轮目标重置为唯一的target目标
+    role.set_round_target(target_list=[target])
+    # 以下这种好像也行(如果所有防反都是先无锁定的话)
+    # role.set_round_target(role.get_round_target().append(target))
     
     # --------------------------------------------------
     # 初始化伤害列表中字典
@@ -313,7 +351,7 @@ def trig_buff_defend_beatback(role, target, value=0, order=0):
         harm["HARM_VARIANT"] = {}
     # --------------------------------------------------
     
-    # 结算buff
+    # 结算buff, 倒序调用
     # 一旦决定出手, 就丢掉身上的所有当前的格挡和防御反击 (目前只有这种逻辑)
     for buff in buff_list_1[::-1]: 
         buff_list_1.remove(buff)
@@ -365,15 +403,22 @@ def is_qualified_to_act(role, condition={}):
     for key, value in condition.items():
         
         # -------------常规条件----------------
+        # 通用条件按照苛刻程度排列
         # 通用消耗条件
-        if key == "COMMON_COST_COND":
+        if key == "COM_COST_COND":
             if not role.is_meeting_cost_condition():
                 return False
+        
+        # 通用行动条件
+        if key == "COM_ACT_COND":
+            if not role.is_meeting_act_condition():
+                return False
+        
         # 通用战斗条件
-        if key == "COMMON_ATK_COND":
+        if key == "COM_ATK_COND":
             if not role.is_meeting_atk_condition():
                 return False
-
+        
         # 本回合受伤害情况=value, 包括受伤害和没受伤害的
         if key == "GET_HURT":
             if role.status_current["round"]["ROUND_GET_HURT"] != value:
@@ -392,14 +437,14 @@ def is_qualified_to_act(role, condition={}):
         # 自身耐力-目标耐力>=value
         # 根据之前的结构, target也应该是个list, 不过这个判断条件默认单对单, 所以取[0]
         if key == "DUR_ABOVE_TARGET":
-            target = role.status_current["round"]["ROUND_TARGET"][0]
+            target = role.get_round_target()[0]
             if ((role.get_role_dur() - target.get_role_dur()) < value):
                 return False
                 
         # 自身力量-目标力量>=value
         # 根据之前的结构, target也应该是个list, 不过这个判断条件默认单对单, 所以取[0]
         if key == "STR_ABOVE_TARGET":
-            target = role.status_current["round"]["ROUND_TARGET"][0]
+            target = role.get_round_target()[0]
             if ((role.get_role_dur() - target.get_role_dur()) < value):
                 return False
         
@@ -444,12 +489,17 @@ def is_qualified_to_act(role, condition={}):
     return True 
 
 
-def exert_effect(role, target, spell_effect={}):
+def exert_effect_to_role(role, target, spell_effect={}):
     
     """
-    施加buff函数
+    施加额外效果的函数
     输入一个命令字典, 来把各种效果处理掉, 包括且不仅限于buff
+    在两种情况下处理:
+        1. 通过伤害判断后的各种字段, 1对1单独处理
+        2. 通过exert_effect的调用, 处理非伤害情形的调用
+    这个函数是所有效果类处理的精髓, 和伤害函数是双璧
     """
+    
     # ---------------------快速跳出-------------------------
     # 外面不加其他判断了, 如果输入进来的是None type, 直接跳出
     if spell_effect==None:
@@ -482,7 +532,7 @@ def exert_effect(role, target, spell_effect={}):
         # ----------------施加buff--------------------------
         # 增益buff
         # 按顺序: 格挡, 格挡反击, 闪避, 闪避反击, 穿甲, 必中, 暴击, 流失, 坚韧, 再生, 隐匿, 消隐
-        # 获得格挡
+        # 获得格挡值=value
         if key == "GET_BUFF_DEFENDING":
             buff = {}
             full_empty_buff(buff)
@@ -494,7 +544,20 @@ def exert_effect(role, target, spell_effect={}):
             buff["BUFF_VALUE"] = value
             role.add_buff_status(buff_string="DEFENDING", add_layer=1, add_buff=buff, add_mode="anyway")
             continue
-        # 获得闪避
+            
+        # 获得格挡反击=1回合
+        if key == "GET_BUFF_DEFENDING_BEATBACK":
+            buff = {}
+            full_empty_buff(buff)
+            buff["BUFF_SOURCE"].append(role.id)
+            buff["BUFF_TARGET"].append(role.id)
+            buff["BUFF_IS_POSITIVE"] = 1
+            buff["BUFF_IS_DISPELLABLE"] = 0
+            buff["BUFF_LAYER"] = 1
+            role.add_buff_status(buff_string="DEFENDING_BEATBACK", add_layer=1, add_buff=buff, add_mode="anyway")
+            continue
+            
+        # 获得闪避=1回合
         if key == "GET_BUFF_EVADING":
             buff = {}
             full_empty_buff(buff)
@@ -509,7 +572,7 @@ def exert_effect(role, target, spell_effect={}):
         # --------------------------------------------------
         # 减益buff
         # 按顺序: 致盲, 虚弱, 重创, 灼烧, 中毒, 诅咒, 幻惑, 缴械, 沉默, 眩晕
-        # 给予中毒
+        # 给予中毒=value层
         if key == "EXERT_BUFF_TOXIC":
             buff = {}
             full_empty_buff(buff)
@@ -520,8 +583,59 @@ def exert_effect(role, target, spell_effect={}):
             target.add_buff_status(buff_string="TOXIC", add_layer=value, add_buff=buff, add_mode="layer")
             continue
         
+        # --------------------------------------------------
+        # 特殊机制BUFF
+        # 枭首
+        if key == "EXERT_BUFF_BEHEAD":
+            buff = {}
+            full_empty_buff(buff)
+            buff["BUFF_SOURCE"].append(role.id)
+            buff["BUFF_TARGET"].append(target.id)
+            buff["BUFF_IS_NEGATIVE"] = 1
+            buff["BUFF_IS_SHEDDING"] = 0
+            buff["BUFF_IS_DISPELLABLE"] = 0
+            buff["BUFF_LAYER"] = value
+            target.add_buff_status(buff_string="BEHEAD", add_layer=value, add_buff=buff, add_mode="layer")
+            buff_list = target.get_buff_status("BEHEAD")
+            for buff in buff_list:
+                if buff["BUFF_LAYER"]>=2:
+                    print("-------枭！---------")
+                    print("--------------------")
+                    print("-------首！---------")
+                    print("--------------------")
+                    target.set_role_hp(-9999)
+                    break
+            continue
+        
     # ------------------------------------------------------
     return
+
+
+def exert_effect(role, step_content={}):
+    """
+    这个函数用来大包大揽, 会调用上面那个函数
+    主要在开始阶段和战斗阶段以及结束阶段, 大片处理buff
+    """
+    # 获取目标表, 可能有这么几种情况
+    target_list = role.get_round_target()
+    # 空
+    if (target_list==None) or len(target_list)==0:
+        # 列表为空时, 即使是负面效果也是给自己的, target=role应该没问题
+        exert_effect_to_role(role=role,target=role,spell_effect=step_content)
+    elif len(target_list)==1:
+        # 1个目标, 也没啥好说的, 就是给那个目标的
+        exert_effect_to_role(role=role,target=target_list[0],spell_effect=step_content)
+    else:
+        # 多个目标, 说实话现在还没有这种情况
+        # 其实也好办, 拆开buff来搞:
+        # EXERT一般是给别人套, 来循环, 否则只做一次
+        for key, value in step_content.items():
+            if "EXERT" in key:
+                for target in target_list[::-1]:
+                    exert_effect_to_role(role=role,target=target,spell_effect=step_content)
+            else:
+                # 如果真有矛盾, 倒时候再穷举吧
+                exert_effect_to_role(role=role,target=role,spell_effect=step_content)     
 
 
 def get_hit_result(role, target):
@@ -632,12 +746,15 @@ def trig_harm(damager, victim, value, extra={}):
     可能不是最好的实现方法
     半成品
     """
+    
     # 伤害端
     if damager.nickname== r"团长":
         print("团长: 什么嘛, 结果我打得还蛮准的嘛……")
     elif damager.nickname== r"夏亚":
         print("夏亚: 胜利是对死者最好的报答啊……")
-            
+    elif damager.nickname== r"杰哥":
+        print("杰哥: 让我看看！")
+
     
     # 被伤害端
     if victim.nickname == r"夏亚":
@@ -727,7 +844,7 @@ def cal_damage(role, content={}, order=0):
     #|#
     # --------------------------------------
     # 先获取要造成伤害的目标, 大部分情况是1个人, 但做了未来兼容多个的可能
-    target_list = role.status_current["round"]["ROUND_TARGET"]
+    target_list = role.get_round_target()
     # 获取伤害的基本情况
     if "HARM_INFLICT" in content.keys():
         harm = content["HARM_INFLICT"]
@@ -790,7 +907,7 @@ def cal_damage(role, content={}, order=0):
         # 获取攻击目标顺序阶段第order轮的step
         target_step = get_step_in_order_phase_from_role(role=target, order=order)
         # 获取攻击目标当前的回合目标
-        target_target_list = target.status_current["round"]["ROUND_TARGET"]
+        target_target_list = target.get_round_target()
         # 因为正式结算之前已经判断过是否能满足攻击条件, 所以这里不是空的都是交锋
         # 现在这种结算交锋的方式, 不能判断实际miss掉的情况
         # 是否要把这种情况视为交锋, 可以再讨论
@@ -827,9 +944,9 @@ def cal_damage(role, content={}, order=0):
         if is_harm_hit:
             # 命中对方
             # 结算技能的命中后效果if_hit
-            exert_effect(role=role,target=target,spell_effect=if_hit)
+            exert_effect_to_role(role=role,target=target,spell_effect=if_hit)
             # 结算技能的被格挡后效果if_defended
-            exert_effect(role=role,target=target,spell_effect=if_defended)
+            exert_effect_to_role(role=role,target=target,spell_effect=if_defended)
             # 结算伤害
             if is_harm_hurt:
                 # 攻击造成伤害
@@ -838,16 +955,16 @@ def cal_damage(role, content={}, order=0):
                 # 函数中包含对给予/受到伤害时的通用调用(吸血等, 这类不包含在技能中)
                 give_harm(role=role,target=target, value=harm_value_after_defending, extra={"is_confronting":is_confronting})
                 # 结算技能的伤害后效果IF_HARM
-                exert_effect(role=role,target=target,spell_effect=if_harm)
+                exert_effect_to_role(role=role,target=target,spell_effect=if_harm)
                 # 回合指示器
                 role.status_current["round"]["ROUND_DO_HARM"] = True
             else:
                 # 攻击被完全格挡
-                exert_effect(role=role,target=target,spell_effect=if_blocked)
+                exert_effect_to_role(role=role,target=target,spell_effect=if_blocked)
         else:
             # 攻击丢失
             # 结算攻击丢失后的效果if_missed
-            exert_effect(role=role,target=target,spell_effect=if_missed)
+            exert_effect_to_role(role=role,target=target,spell_effect=if_missed)
         
         
         # 正式处理对方带有trigger的buff/debuff效果

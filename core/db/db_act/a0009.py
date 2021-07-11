@@ -40,12 +40,14 @@ class ACTION_a0009(ActionBase):
         # ----------------------------------------------
         # 开始阶段
         # 是否有开始阶段(没有开始阶段的话,后面跳过)
-        self.start_phase = False
+        self.start_phase = True
         # 开始阶段执行内容(列表)
         ## self.content_start_phase = []
         # STEP 1
         step = {}
         step["harmful"] = False
+        step["condition"] = {"COM_ACT_COND":1}
+        step["content"] = {"GET_BUFF_DEFENDING":25, "GET_BUFF_DEFENDING_BEATBACK":1}
         self.content_start_phase.append(step)
         # STEP 2 if there is
         # .......

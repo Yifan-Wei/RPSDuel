@@ -48,15 +48,15 @@ class RoleBase(object):
     def is_role_exist(self):
         # 检查角色是否真的存在
         if self.id != "":
-            return 1
-        return 0
+            return True
+        return False
         
     def is_role_alive(self):
         # 检查角色是否存活
         if self.status_current["basic"]["ROLE_HP"]>0:
-            return 1
+            return True
         else:
-            return 0
+            return False
     
     
     def init_current_status(self):
@@ -267,9 +267,25 @@ class RoleBase(object):
                 # 如果当前耐力大于上限, 则降低到上限
                 if hp>self.status_current["basic"]["ROLE_MAX_DUR"]:
                     self.status_current["basic"]["ROLE_DUR"]=self.status_current["basic"]["ROLE_MAX_DUR"]
+        
+        print("{0}的耐力值从{1}/{2}变更为{3}/{4}".format(self.nickname, dur, max_dur, self.status_current["basic"]["ROLE_DUR"],self.status_current["basic"]["ROLE_MAX_DUR"]))
     
-        print("{4}耐力值从{0}/{1}变更为{2}/{3}".format(dur,max_dur,self.status_current["basic"]["ROLE_DUR"],self.status_current["basic"]["ROLE_MAX_DUR"],self.nickname))
     
+    def get_round_target(self):
+        # -----------------------
+        # 获取角色当前回合的目标, 省事的小函数
+        # -----------------------
+        target = self.status_current["round"]["ROUND_TARGET"]
+        return target
+    
+    
+    def set_round_target(self, target_list):
+        # -----------------------
+        # 设置角色当前回合的目标, 省事的小函数
+        # -----------------------
+        self.status_current["round"]["ROUND_TARGET"] = target_list
+        return
+        
     
     def get_buff_status(self, buff_string):
         """
@@ -302,7 +318,11 @@ class RoleBase(object):
         # 默认给add_buff一个空字典,如果不输入,就置为默认值, 有值就不管了
         full_empty_buff(add_buff)
         
-        list = self.status_current["buff"][buff_string]
+        if buff_string in self.status_current["buff"]:
+            list = self.status_current["buff"][buff_string]
+        else:
+            list = []
+            self.status_current["buff"][buff_string] = list
         
         if add_mode != "anyway":
             # 模式不是独立叠加
@@ -462,20 +482,41 @@ class RoleBase(object):
     
     def is_meeting_cost_condition(self):
         """
-        暂时还没有什么功能能禁止你消耗的
-        不过未来可能有禁止消耗的东西吧
+        需要满足: 1.角色存活
         return True/False
         """
+        if not(self.is_role_alive()):
+            print("{}已经濒死".format(self.nickname))
+            return False
         return True
+        
+    def is_meeting_act_condition(self):
+        """
+        需要满足: 1.角色存活
+        需要满足: 2.没有晕眩类的buff在身上
+        return True/False
+        """
+        if not(self.is_role_alive()):
+            print("{}已经濒死".format(self.nickname))
+            return False
+        if self.is_buffed("STUNNED"):
+            print("{}晕眩中".format(self.nickname))
+            return False
+        return True
+        
     
     def is_meeting_atk_condition(self):
         """
         为条件判断做的函数, 是否当前能攻击, 写成函数是为了固化判断
-        需要满足: 没有晕眩和缴械类的buff在身上
+        需要满足: 1.角色存活
+        需要满足: 2.没有晕眩和缴械类的buff在身上
         return: True/False
         """
-        
+        if not(self.is_role_alive()):
+            print("{}已经濒死".format(self.nickname))
+            return False
         if self.is_buffed("DISARMED") or self.is_buffed("STUNNED"):
+            print("{}晕眩或者缴械".format(self.nickname))
             return False
         return True
     
