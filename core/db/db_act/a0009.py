@@ -47,7 +47,7 @@ class ACTION_a0009(ActionBase):
         step = {}
         step["harmful"] = False
         step["condition"] = {"COM_ACT_COND":1}
-        step["content"] = {"GET_BUFF_DEFENDING":25, "GET_BUFF_DEFENDING_BEATBACK":1}
+        step["content"] = {"GET_BUFF_DEFENDING":50, "GET_BUFF_DEFENDING_BEATBACK":1}
         self.content_start_phase.append(step)
         # STEP 2 if there is
         # .......

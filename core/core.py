@@ -11,90 +11,63 @@
 # v 0.2 7th July weiyifan: add a lot things
 
 # -------------------------------------------
-import sys, gc, math
-import os,sys,time,shutil,ast
+import sys, gc, math, os, time, shutil, ast, random
 import pandas as pd
 import json as js
-from ast import literal_eval
-
 
 # self-designed
 from db import *
 from func import *
 
 if __name__ == "__main__":
-    print("铁华团的战斗开始了！")
+    
+    end_flag = False
     pool = []
     a = db_role.c0001.ROLE_c0001(r"001")
     b = db_role.c0001.ROLE_c0001(r"002")
-    c = db_role.c0001.ROLE_c0001(r"003")
-    a.set_role_str(value=50)
-    b.set_role_str(value=50)
-    a.set_role_dur(value=-3)
-    b.set_role_dur(value=-3)
-    a.nickname = r"夏亚"
-    b.nickname = r"团长"
-    c.nickname = r"杰哥"
     pool.append(a)
     pool.append(b)
-    pool.append(c)
     
-    a.add_buff_status("CRITICAL",1,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
-
-    #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":25})
-    #b.add_buff_status("DEFENDING_BEATBACK",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
-    
-    
-    #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
-    #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
-    #b.add_buff_status("DEFENDING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1,"BUFF_VALUE":10}, add_mode="anyway")
-    #b.add_buff_status("PIERCING",2,add_buff={"BUFF_SOURCE":[r"001"],"BUFF_TARGET":[r"001"],"BUFF_IS_POSITIVE":1})
-    
-    b.add_buff_status("BLIND",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_NEGATIVE":1})
-    #b.add_buff_status("EVADING",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_POSITIVE":1})
-    #b.add_buff_status("MUSTHIT",2,add_buff={"BUFF_SOURCE":[r"002"],"BUFF_TARGET":[r"002"],"BUFF_IS_POSITIVE":1})
-    
-    a0009_1 = db_act.a0009.ACTION_a0009()
-    a0066_1 = db_act.a0066.ACTION_a0066()
-    a0154_1 = db_act.a0154.ACTION_a0154()
-    
-    a.status_current["round"]["ROUND_ACTION"]=a0154_1
-    b.status_current["round"]["ROUND_ACTION"]=a0009_1
-    c.status_current["round"]["ROUND_ACTION"]=a0066_1
-    a.set_round_target([b])
-    b.set_round_target([])
-    c.set_round_target([a])
-    exert_effect(role=c,step_content={"EXERT_BUFF_BEHEAD":1})
+    a.nickname = r"织田信长"
     a.status_current["basic"]["ROLE_SPD"]=154
+    a.camp = r"幕府"
+
+    b.nickname = r"明智光秀"
     b.status_current["basic"]["ROLE_SPD"]=100
-    c.status_current["basic"]["ROLE_SPD"]=174
-    main_round(pool)
+    b.camp = r"叛徒"
+    round = 0
     
-    """
-    member = get_role_from_id("001", pool)
-    member.add_buff_status("TOXIC",100,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_NEGATIVE":1})
-    member.add_buff_status("REGENERATION",20,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_NEGATIVE":1})
-    member.add_buff_status("BURNING",3,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_NEGATIVE":1})
-    member.add_buff_status("PIERCING",1,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_POSITIVE":1})
-    member.add_buff_status("PIERCING",4,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_POSITIVE":1})
-    member.add_buff_status("PIERCING",4,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_POSITIVE":1}, add_mode="refresh")
-    member.add_buff_status("PIERCING",4,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["114514"],"BUFF_IS_POSITIVE":1}, add_mode="anyway")
-    member.add_buff_status("PIERCING",2,add_buff={"BUFF_SOURCE":["114514"],"BUFF_TARGET":["5201314"],"BUFF_IS_POSITIVE":1})
-    member.add_buff_status("PIERCING",1,add_buff={"BUFF_SOURCE":["5201314"],"BUFF_TARGET":["5201314"],"BUFF_IS_POSITIVE":1})
-    member.add_buff_status("PIERCING",2,add_buff={"BUFF_SOURCE":["5201314"],"BUFF_TARGET":["114514"],"BUFF_IS_POSITIVE":1})
-    #print(member.get_buff_status("PIERCING"))
-    #member.add_buff_status("TOXIC",3,["114514"],["114514"])
-    #print(member.get_buff_status("TOXIC"))
-    #result = member.rm_buff_status("TOXIC",3, pool,["114514"],["114514"],billmode="BILL")
-    #print(result)
-    #print(member.get_buff_status("TOXIC"))
-    member.print_buff_status()
-    member.iter_buff_status(pool)
-    #print(result)
-    #print(member.get_buff_status("BEHEAD"))
-    #print(member.get_role_hp())
-    #print(member.get_role_dur())
-    #member.set_role_dur(-4)
-    #print(member.get_role_dur())
-    member.print_buff_status()
-    """
+    strategy_list = ["a0003","a0004","a0009","a0012","a0066","a0154"]
+    name_list = [r"修整",r"重振旗鼓",r"防御反击",r"攻击",r"枭首",r"手里剑"]
+    
+    # 循环战斗，直到耗尽
+    while (end_flag==False):
+        # 循环回合状态:
+        for role in pool[::-1]:
+            role.suc_round_status()
+        
+        # a是玩家自己输入的
+        action_string = random.choice(strategy_list)
+        action_tmp = eval("db_act.{0}.ACTION_{0}()".format(action_string))
+        a.set_round_action(action_tmp)
+        if action_tmp.type == "UNLOCK":
+            a.set_round_target([])
+        else:
+            a.set_round_target([b])
+            
+        # b是随机控制的
+        action_string = random.choice(strategy_list)
+        print(action_string)
+        action_tmp = eval("db_act.{0}.ACTION_{0}()".format(action_string))
+        b.set_round_action(action_tmp)
+        if action_tmp.type == "UNLOCK":
+            b.set_round_target([])
+        else:
+            b.set_round_target([a])
+        pool = main_round(pool)
+        
+        
+        # 跳出判断
+        end_flag = is_battle_end(input_pool=pool)
+        # 循环
+        round +=1

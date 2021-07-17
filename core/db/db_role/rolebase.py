@@ -31,12 +31,17 @@ class RoleBase(object):
         self.stream = ""
         # 稀有度
         self.rarity = ""
+        # 阵营
+        self.camp = ""
+        # AI
+        self.ai = {}
         
         # 角色默认状态
         self.status_default = {}
         self.status_default["basic"] = {}
         self.status_default["buff"] = {}
         self.status_default["round"] = {}
+        self.status_default["last_round"]={}
         # 角色当前状态
         self.status_current = self.status_default.copy()
         # 角色被动(不知道有没有用)
@@ -133,16 +138,58 @@ class RoleBase(object):
         
         # 初始化基础属性
         round_list = []
-        # 按顺序: 回合目标, 回合行动, 回合交过锋, 回合受到伤害, 回合施加过伤害
-        round_list.append("ROUND_TARGET")
-        round_list.append("ROUND_ACTION")
+        round_sp_list = []
+        # 按顺序:  回合交锋
+        # 作为主动方: 命中, 丢失, 伤害, 防御, 完全防御
         round_list.append("ROUND_HAS_CONFRONTED")
-        round_list.append("ROUND_GET_HURT")
-        round_list.append("ROUND_DO_HARM")
+        round_list.append("ROUND_HAS_HIT")
+        round_list.append("ROUND_HAS_HARM")
+        round_list.append("ROUND_BEEN_MISSED")
+        round_list.append("ROUND_BEEN_DEFENDED")
+        round_list.append("ROUND_BEEN_BLOCKED")
+        # 作为被动方: 被命中, 闪避, 被伤害, 被防御, 被完全防御
+        round_list.append("ROUND_BEEN_HIT")
+        round_list.append("ROUND_BEEN_HARM")
+        round_list.append("ROUND_HAS_MISSED")
+        round_list.append("ROUND_HAS_DEFENDED")
+        round_list.append("ROUND_HAS_BLOCKED")
+        # 特殊的两项
+        round_sp_list.append("ROUND_TARGET")
+        round_sp_list.append("ROUND_ACTION")
         
+        # 记录本回合和上一回合状态
         for string in round_list:
+            self.status_default["round"][string] = False
+            self.status_default["last_round"][string] = False
+        
+        # 记录本回合和上一回合的特殊状态
+        for string in round_sp_list:
             self.status_default["round"][string] = None
-           
+            self.status_default["last_round"][string] = None
+        
+        
+    def suc_round_status(self):
+        
+        # 回合开始时调用, 包含:
+        # 1.清除上上个回合的冗余数据
+        # 2.继承上回合的数据到last_round
+        # 3.继承默认数据的到round
+        
+        #print(self.status_current["last_round"])
+        #print(self.status_current["round"])
+        # 删除冗余的上上个回合行动
+        del self.status_current["last_round"]["ROUND_ACTION"]
+        del self.status_current["last_round"]
+        gc.collect()
+        
+        # 继承上回合的数据到last_round
+        # 不确定是不是这样搞的
+        self.status_current["last_round"] = self.status_current["round"]
+        
+        # 继承默认的开始数据
+        self.status_current["round"] = deepcopy(self.status_default["round"])
+        # END
+        
     
     def get_role_str(self):
         """
@@ -271,12 +318,31 @@ class RoleBase(object):
         print("{0}的耐力值从{1}/{2}变更为{3}/{4}".format(self.nickname, dur, max_dur, self.status_current["basic"]["ROLE_DUR"],self.status_current["basic"]["ROLE_MAX_DUR"]))
     
     
+    def get_role_action(self, mode="current"):
+        # -----------------------
+        # 获取角色当前回合的行动, 省事的小函数
+        # -----------------------
+        if "ROUND_ACTION" in self.status_current["round"].keys():
+                action = self.status_current["round"]["ROUND_ACTION"]
+                return action
+        return None 
+    
+    def set_round_action(self, action, mode="current"):
+        # -----------------------
+        # 设置角色当前回合的行动, 省事的小函数
+        # -----------------------
+        self.status_current["round"]["ROUND_ACTION"] = action
+        return
+        
+    
     def get_round_target(self):
         # -----------------------
         # 获取角色当前回合的目标, 省事的小函数
         # -----------------------
-        target = self.status_current["round"]["ROUND_TARGET"]
-        return target
+        if "ROUND_TARGET" in self.status_current["round"].keys():
+            target = self.status_current["round"]["ROUND_TARGET"]
+            return target
+        return None
     
     
     def set_round_target(self, target_list):

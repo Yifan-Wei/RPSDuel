@@ -14,8 +14,40 @@
 import gc
 from db.db_role.rolefunc import *
 
- 
-def main_round(input_pool):
+
+def is_battle_end(input_pool):
+    # 统计剩余阵营数目
+    end_dict = {}
+    cmp = 0
+    for role in input_pool[::-1]:
+        camp = role.camp
+        if camp in end_dict.keys():
+            end_dict[camp]+=1
+        else:
+            end_dict[camp]=1
+    # 打印战局
+    for key, value in end_dict.items():
+        print("{0}阵营残余{1}人".format(key,value))
+        cmp += 1
+    # 跳出条件
+    if (cmp==1):
+        return True
+    return False
+
+def input_action_string():
+    action_invalid = True
+    # 循环要求输入
+    while action_invalid:
+        print("请输入你的行动")
+        for ii in range(len(strategy_list)):
+            print("##{0}={1}".format(strategy_list[ii],name_list[ii]))
+        action_string = input()
+        if action_string in strategy_list:
+            action_invalid = False
+    return action_string
+
+
+def main_round(input_pool, round=0):
 
     """
     主结算函数
@@ -33,7 +65,7 @@ def main_round(input_pool):
     # 获取本回合各人的行动
     for role in pool[::-1]:
         # 开始行动
-        action = get_action_from_role(role=role)
+        action = role.get_role_action()
         if not(action==None):
             
             # 存在ACT, 先检查ACT是否不满足发动条件
@@ -45,7 +77,7 @@ def main_round(input_pool):
             else:
                 # 不满足发动条件, 有动作也不要了,直接给个None回去
                 set_action_from_role(role=role,action=None)
-                string = "{} 不满足行动条件, 无法行动, 好逊哦".format(role.nickname)
+                string = "{} 不满足 {} 的行动条件, 无法行动, 好逊哦".format(role.nickname, action.name)
         else:
             string = "{} 没有行动".format(role.nickname)
         print(string)
@@ -98,7 +130,7 @@ def main_round(input_pool):
         # 条件已经全部检查完毕, 正式操作 
         for role in pool[::-1]:
             # 开始行动
-            action = get_action_from_role(role=role)
+            action = role.get_role_action()
             # 判断当前遍历的角色能否在这个阶段行动
             if not(action==None) and (action.order_phase):
                 # 如果有行动, 且行动有起始阶段, 继续
@@ -185,6 +217,3 @@ def main_round(input_pool):
     
     
     return pool
-        
-        
-        
