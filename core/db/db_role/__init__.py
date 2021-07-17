@@ -2,6 +2,6 @@
 # -*- coding: UTF-8 -*-
 
 print("Role PKG imported")
-__all__ = ['c0001']
+__all__ = ["c0001", "c0002"]
 
 from db.db_role import *

@@ -72,7 +72,7 @@ class ACTION_a0003(ActionBase):
         step = {}
         step["harmful"] = False
         step["condition"] = {"COM_ACT_COND":1}
-        step["content"] = {"DUR_REC":2}
+        step["content"] = {"REC_DUR":2}
         
         self.content_ender_phase.append(step)
         

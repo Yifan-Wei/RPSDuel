@@ -275,6 +275,20 @@ def rm_buff_status_from_dict(buff_string, buff_list, buff, rm_layer, pool, billm
                 for target in target_list:
                     target.set_role_hp(-10.0*layer, mode="default")
             
+            # 人物特性类buff
+            if buff_string == "FEATURE_WARRIOR_MASTER":
+                # 回合结束时, 自身力量+3
+                for target in target_list:
+                    print("感觉{0}变得愈发强大".format(target.nickname))
+                    target.set_role_str(3)
+                    
+            elif buff_string == "FEATURE_WARRIOR_SAMURAI":
+                # 回合结束时, 如果本回合交锋过, 恢复行动耐力
+                for target in target_list:
+                    if target.is_confronted():
+                        print("触发交锋的{0}尚有余裕".format(target.nickname))
+                        target.set_role_dur(target.get_round_durcost())
+            
         # 结算完成, 拿掉层数
         buff["BUFF_LAYER"] = max(0, layer-1)
         
@@ -385,6 +399,10 @@ def is_qualified_to_act(role, condition={}):
     role: 判断主体
     condition: 判断条件, 是个字典
     return True/False
+    这里有个已知问题: 
+        如果涉及到顺序结算和耐力比较会出现, A先结算了, 扣了耐力;
+        B再过去和他比较耐力, 这样对A是不公平的
+        解决方法应该是不用实时的值去比, 用一个回合开始记录的值
     """
     # 没条件 空过
     if condition==None:
@@ -394,122 +412,126 @@ def is_qualified_to_act(role, condition={}):
     # 这个函数如果明确调用了函数,暂时都是rolebase里面的函数
     for key, value in condition.items():
         
-        # -------------通用条件----------------
-        # 通用条件按照苛刻程度排列
-        # 通用消耗条件
-        if key == "COM_COST_COND":
-            if not role.is_meeting_cost_condition():
-                return False
+        if "COM_" in key:
+            # -------------通用条件----------------
+            # 通用条件按照苛刻程度排列
+            # 通用消耗条件
+            if key == "COM_COST_COND":
+                if not role.is_meeting_cost_condition():
+                    return False
+            
+            # 通用行动条件
+            if key == "COM_ACT_COND":
+                if not role.is_meeting_act_condition():
+                    return False
+            
+            # 通用战斗条件
+            if key == "COM_ATK_COND":
+                if not role.is_meeting_atk_condition():
+                    return False
+            # --------------------------------------
+            
+        elif "ROUND_" in key:
+            # ------------回合指示器----------------
+            # 本回合交锋情况(应该不太可能存在正在交锋的情况)
+            if key == "ROUND_HAS_CONFRONTED":
+                if role.status_current["round"]["ROUND_HAS_CONFRONTED"] != value:
+                    return False
+            
+            # 本回合命中情况=value, 0/1=无/有
+            if key == "ROUND_HAS_HIT":
+                if role.status_current["round"]["ROUND_HAS_HIT"] != value:
+                    return False
+            
+            # 本回合施加伤害情况=value, 0/1=无/有
+            if key == "ROUND_HAS_HARM":
+                if role.status_current["round"]["ROUND_HAS_HARM"] != value:
+                    return False
+            
+            # 本回合被闪避情况=value, 0/1=无/有
+            if key == "ROUND_BEEN_MISSED":
+                if role.status_current["round"]["ROUND_BEEN_MISSED"] != value:
+                    return False
+            
+            # 本回合被防御情况=value, 0/1=无/有
+            if key == "ROUND_BEEN_DEFENDED":
+                if role.status_current["round"]["ROUND_BEEN_DEFENDED"] != value:
+                    return False
+            
+            # 本回合被完美防御情况=value, 0/1=无/有
+            if key == "ROUND_BEEN_BLOCKED":
+                if role.status_current["round"]["ROUND_BEEN_BLOCKED"] != value:
+                    return False
+            
+            # 本回合被命中情况=value, 0/1=无/有
+            if key == "ROUND_BEEN_HIT":
+                if role.status_current["round"]["ROUND_BEEN_HIT"] != value:
+                    return False
+            
+            # 本回合受伤害情况=value, 0/1=无/有
+            if key == "ROUND_BEEN_HARM":
+                if role.status_current["round"]["ROUND_BEEN_HARM"] != value:
+                    return False
+                else:
+                    print("未被伤害")
+            
+            # 本回合成功闪避情况=value, 0/1=无/有
+            if key == "ROUND_HAS_MISSED":
+                if role.status_current["round"]["ROUND_HAS_MISSED"] != value:
+                    return False
+            
+            # 本回合成功防御情况=value, 0/1=无/有
+            if key == "ROUND_HAS_DEFENDED":
+                if role.status_current["round"]["ROUND_HAS_DEFENDED"] != value:
+                    return False
+            
+            # 本回合完美防御情况=value, 0/1=无/有
+            if key == "ROUND_HAS_BLOCKED":
+                if role.status_current["round"]["ROUND_HAS_BLOCKED"] != value:
+                    return False
+                    
+            # 上回合命中情况=value, 0/1=无/有
+            if key == "LAST_ROUND_HAS_HIT":
+                if role.status_current["round"]["LAST_ROUND_HAS_HIT"] != value:
+                    return False    
+            # -------------------------------------
         
-        # 通用行动条件
-        if key == "COM_ACT_COND":
-            if not role.is_meeting_act_condition():
-                return False
-        
-        # 通用战斗条件
-        if key == "COM_ATK_COND":
-            if not role.is_meeting_atk_condition():
-                return False
-        # --------------------------------------
-        # ------------回合指示器----------------
-        # 本回合交锋情况(应该不太可能存在正在交锋的情况)
-        if key == "ROUND_HAS_CONFRONTED":
-            if role.status_current["round"]["ROUND_HAS_CONFRONTED"] != value:
-                return False
-        
-        # 本回合命中情况=value, 0/1=无/有
-        if key == "ROUND_HAS_HIT":
-            if role.status_current["round"]["ROUND_HAS_HIT"] != value:
-                return False
-        
-        # 本回合施加伤害情况=value, 0/1=无/有
-        if key == "ROUND_HAS_HARM":
-            if role.status_current["round"]["ROUND_HAS_HARM"] != value:
-                return False
-        
-        # 本回合被闪避情况=value, 0/1=无/有
-        if key == "ROUND_BEEN_MISSED":
-            if role.status_current["round"]["ROUND_BEEN_MISSED"] != value:
-                return False
-        
-        # 本回合被防御情况=value, 0/1=无/有
-        if key == "ROUND_BEEN_DEFENDED":
-            if role.status_current["round"]["ROUND_BEEN_DEFENDED"] != value:
-                return False
-        
-        # 本回合被完美防御情况=value, 0/1=无/有
-        if key == "ROUND_BEEN_BLOCKED":
-            if role.status_current["round"]["ROUND_BEEN_BLOCKED"] != value:
-                return False
-        
-        # 本回合被命中情况=value, 0/1=无/有
-        if key == "ROUND_BEEN_HIT":
-            if role.status_current["round"]["ROUND_BEEN_HIT"] != value:
-                return False
-        
-        # 本回合受伤害情况=value, 0/1=无/有
-        if key == "ROUND_BEEN_HARM":
-            if role.status_current["round"]["ROUND_BEEN_HARM"] != value:
-                return False
-            else:
-                print("未被伤害")
-        
-        # 本回合成功闪避情况=value, 0/1=无/有
-        if key == "ROUND_HAS_MISSED":
-            if role.status_current["round"]["ROUND_HAS_MISSED"] != value:
-                return False
-        
-        # 本回合成功防御情况=value, 0/1=无/有
-        if key == "ROUND_HAS_DEFENDED":
-            if role.status_current["round"]["ROUND_HAS_DEFENDED"] != value:
-                return False
-        
-        # 本回合完美防御情况=value, 0/1=无/有
-        if key == "ROUND_HAS_BLOCKED":
-            if role.status_current["round"]["ROUND_HAS_BLOCKED"] != value:
-                return False
-                
-        # 上回合命中情况=value, 0/1=无/有
-        if key == "LAST_ROUND_HAS_HIT":
-            if role.status_current["round"]["LAST_ROUND_HAS_HIT"] != value:
-                return False    
-        # -------------------------------------
-        
-        # 自身耐力-目标耐力>=value
-        # 根据之前的结构, target也应该是个list, 不过这个判断条件默认单对单, 所以取[0]
-        if key == "DUR_ABOVE_TARGET":
-            target = role.get_round_target()[0]
-            if ((role.get_role_dur() - target.get_role_dur()) < value):
-                return False
-                
-        # 自身力量-目标力量>=value
-        # 根据之前的结构, target也应该是个list, 不过这个判断条件默认单对单, 所以取[0]
-        if key == "STR_ABOVE_TARGET":
-            target = role.get_round_target()[0]
-            if ((role.get_role_dur() - target.get_role_dur()) < value):
-                return False
-        
-        # --------------------------------------
-        #|#
-        #|#
-        #|#
-        # --------------结算条件----------------
-        # HP消耗, 要求当前HP严格大于消耗HP
-        if key == "HP_COST":
-            if role.get_role_hp() <= value:
-                return False
-        
-        # DUR消耗, 要求当前DUR大于等于消耗DUR        
-        if key == "DUR_COST":
-            if role.get_role_dur() < value:
-                return False
-        # --------------------------------------
-        #|#
-        #|#
-        #|#
-        # -------------特殊条件-----------------
-        # 暂时没有
-        # --------------------------------------
+        else:
+            # 自身耐力-目标耐力>=value
+            # 根据之前的结构, target也应该是个list, 不过这个判断条件默认单对单, 所以取[0]
+            # 这里不能用实时的值, 要用回合开始前的值
+            if key == "DUR_ABOVE_TARGET":
+                target = role.get_round_target()[0]
+                if ((role.get_role_dur(mode="last") - target.get_role_dur(mode="last")) < value):
+                    return False
+                    
+            # 自身力量-目标力量>=value
+            # 根据之前的结构, target也应该是个list, 不过这个判断条件默认单对单, 所以取[0]
+            if key == "STR_ABOVE_TARGET":
+                target = role.get_round_target()[0]
+                if ((role.get_role_dur() - target.get_role_dur()) < value):
+                    return False
+            # --------------------------------------
+            #|#
+            #|#
+            #|#
+            # --------------结算条件----------------
+            # HP消耗, 要求当前HP严格大于消耗HP
+            if key == "HP_COST":
+                if role.get_role_hp() <= value:
+                    return False
+            
+            # DUR消耗, 要求当前DUR大于等于消耗DUR        
+            if key == "DUR_COST":
+                if role.get_role_dur() < value:
+                    return False
+            # --------------------------------------
+            #|#
+            #|#
+            #|#
+            # -------------特殊条件-----------------
+            # 暂时没有
+            # --------------------------------------
         
     
     # 所有条件遍历完成之后, 开始处理结算条件
@@ -523,6 +545,8 @@ def is_qualified_to_act(role, condition={}):
         # DUR消耗, 已要求当前DUR大于等于消耗DUR        
         if key =="DUR_COST":
             role.set_role_dur(-1*value)
+            #回合指示器: DUR消耗情况
+            role.status_current["round"]["ROUND_DURCOST"]+=value
         # --------------------------------------
         
         
@@ -552,102 +576,125 @@ def exert_effect_to_role(role, target, spell_effect={}):
     
     # ---------------------循环遍历-------------------------
     for key, value in spell_effect.items():
+        # if可以初筛, 避免所有if都要跑一遍
+        if "REC_" in key:
+            # -----------------常规字段-------------------------
+            # 恢复耐力
+            if key == "REC_DUR":
+                role.set_role_dur(value)
+                continue
+            # 恢复生命
+            if key == "REC_HP":
+                role.set_role_hp(value)
+                continue
+            # 提升力量
+            if key == "REC_STR":
+                role.set_role_str(value)
+                continue
         
-        # -----------------常规字段-------------------------
-        # 恢复耐力
-        if key == "DUR_REC":
-            role.set_role_dur(value)
-            continue
-        # 恢复生命
-        if key == "HP_REC":
-            role.set_role_hp(value)
-            continue
-        # 提升力量
-        if key == "STR_REC":
-            role.set_role_str(value)
-            continue
-        # --------------------------------------------------
+        elif "GET_" in key:
+            # ----------------给自己施加buff--------------------------
+            # 增益buff
+            # 按顺序: 格挡, 格挡反击, 闪避, 闪避反击, 穿甲, 必中, 暴击, 流失, 坚韧, 再生, 隐匿, 消隐
+            # 获得格挡值=value
+            if key == "GET_BUFF_DEFENDING":
+                buff = {}
+                full_empty_buff(buff)
+                buff["BUFF_SOURCE"].append(role.id)
+                buff["BUFF_TARGET"].append(role.id)
+                buff["BUFF_IS_POSITIVE"] = 1
+                buff["BUFF_IS_DISPELLABLE"] = 0
+                buff["BUFF_LAYER"] = 1
+                buff["BUFF_VALUE"] = value
+                role.add_buff_status(buff_string="DEFENDING", add_layer=1, add_buff=buff, add_mode="anyway")
+                continue
+                
+            # 获得格挡反击=1回合
+            if key == "GET_BUFF_DEFENDING_BEATBACK":
+                buff = {}
+                full_empty_buff(buff)
+                buff["BUFF_SOURCE"].append(role.id)
+                buff["BUFF_TARGET"].append(role.id)
+                buff["BUFF_IS_POSITIVE"] = 1
+                buff["BUFF_IS_DISPELLABLE"] = 0
+                buff["BUFF_LAYER"] = 1
+                role.add_buff_status(buff_string="DEFENDING_BEATBACK", add_layer=1, add_buff=buff, add_mode="anyway")
+                continue
+                
+            # 获得闪避=1回合
+            if key == "GET_BUFF_EVADING":
+                buff = {}
+                full_empty_buff(buff)
+                buff["BUFF_SOURCE"].append(role.id)
+                buff["BUFF_TARGET"].append(role.id)
+                buff["BUFF_IS_POSITIVE"] = 1
+                buff["BUFF_IS_DISPELLABLE"] = 0
+                buff["BUFF_LAYER"] = 1
+                role.add_buff_status(buff_string="EVADING", add_layer=1, add_buff=buff, add_mode="refresh")
+                continue
         
-        
-        
-        # ----------------施加buff--------------------------
-        # 增益buff
-        # 按顺序: 格挡, 格挡反击, 闪避, 闪避反击, 穿甲, 必中, 暴击, 流失, 坚韧, 再生, 隐匿, 消隐
-        # 获得格挡值=value
-        if key == "GET_BUFF_DEFENDING":
-            buff = {}
-            full_empty_buff(buff)
-            buff["BUFF_SOURCE"].append(role.id)
-            buff["BUFF_TARGET"].append(role.id)
-            buff["BUFF_IS_POSITIVE"] = 1
-            buff["BUFF_IS_DISPELLABLE"] = 0
-            buff["BUFF_LAYER"] = 1
-            buff["BUFF_VALUE"] = value
-            role.add_buff_status(buff_string="DEFENDING", add_layer=1, add_buff=buff, add_mode="anyway")
-            continue
+        elif "EXERT_" in key:
+            # --------------------------------------------------
+            # 减益buff
+            # 按顺序: 致盲, 虚弱, 重创, 灼烧, 中毒, 诅咒, 幻惑, 缴械, 沉默, 眩晕
+            # 给予中毒=value层
+            if key == "EXERT_BUFF_TOXIC":
+                buff = {}
+                full_empty_buff(buff)
+                buff["BUFF_SOURCE"].append(role.id)
+                buff["BUFF_TARGET"].append(target.id)
+                buff["BUFF_IS_NEGATIVE"] = 1
+                buff["BUFF_LAYER"] = value
+                target.add_buff_status(buff_string="TOXIC", add_layer=value, add_buff=buff, add_mode="layer")
+                continue
             
-        # 获得格挡反击=1回合
-        if key == "GET_BUFF_DEFENDING_BEATBACK":
-            buff = {}
-            full_empty_buff(buff)
-            buff["BUFF_SOURCE"].append(role.id)
-            buff["BUFF_TARGET"].append(role.id)
-            buff["BUFF_IS_POSITIVE"] = 1
-            buff["BUFF_IS_DISPELLABLE"] = 0
-            buff["BUFF_LAYER"] = 1
-            role.add_buff_status(buff_string="DEFENDING_BEATBACK", add_layer=1, add_buff=buff, add_mode="anyway")
-            continue
+            # --------------------------------------------------
+            # 特殊机制BUFF
+            # 枭首
+            if key == "EXERT_BUFF_BEHEAD":
+                buff = {}
+                full_empty_buff(buff)
+                buff["BUFF_SOURCE"].append(role.id)
+                buff["BUFF_TARGET"].append(target.id)
+                buff["BUFF_IS_NEGATIVE"] = 1
+                buff["BUFF_IS_SHEDDING"] = 0
+                buff["BUFF_IS_DISPELLABLE"] = 0
+                buff["BUFF_LAYER"] = value
+                target.add_buff_status(buff_string="BEHEAD", add_layer=value, add_buff=buff, add_mode="layer")
+                buff_list = target.get_buff_status("BEHEAD")
+                for buff in buff_list:
+                    if buff["BUFF_LAYER"]>=2:
+                        print("-------枭！---------")
+                        print("-------首！---------")
+                        target.set_role_hp(-9999)
+                        break
+                continue
             
-        # 获得闪避=1回合
-        if key == "GET_BUFF_EVADING":
-            buff = {}
-            full_empty_buff(buff)
-            buff["BUFF_SOURCE"].append(role.id)
-            buff["BUFF_TARGET"].append(role.id)
-            buff["BUFF_IS_POSITIVE"] = 1
-            buff["BUFF_IS_DISPELLABLE"] = 0
-            buff["BUFF_LAYER"] = 1
-            role.add_buff_status(buff_string="EVADING", add_layer=1, add_buff=buff, add_mode="refresh")
-            continue
-
-        # --------------------------------------------------
-        # 减益buff
-        # 按顺序: 致盲, 虚弱, 重创, 灼烧, 中毒, 诅咒, 幻惑, 缴械, 沉默, 眩晕
-        # 给予中毒=value层
-        if key == "EXERT_BUFF_TOXIC":
-            buff = {}
-            full_empty_buff(buff)
-            buff["BUFF_SOURCE"].append(role.id)
-            buff["BUFF_TARGET"].append(target.id)
-            buff["BUFF_IS_NEGATIVE"] = 1
-            buff["BUFF_LAYER"] = value
-            target.add_buff_status(buff_string="TOXIC", add_layer=value, add_buff=buff, add_mode="layer")
-            continue
-        
-        # --------------------------------------------------
-        # 特殊机制BUFF
-        # 枭首
-        if key == "EXERT_BUFF_BEHEAD":
-            buff = {}
-            full_empty_buff(buff)
-            buff["BUFF_SOURCE"].append(role.id)
-            buff["BUFF_TARGET"].append(target.id)
-            buff["BUFF_IS_NEGATIVE"] = 1
-            buff["BUFF_IS_SHEDDING"] = 0
-            buff["BUFF_IS_DISPELLABLE"] = 0
-            buff["BUFF_LAYER"] = value
-            target.add_buff_status(buff_string="BEHEAD", add_layer=value, add_buff=buff, add_mode="layer")
-            buff_list = target.get_buff_status("BEHEAD")
-            for buff in buff_list:
-                if buff["BUFF_LAYER"]>=2:
-                    print("-------枭！---------")
-                    print("--------------------")
-                    print("-------首！---------")
-                    print("--------------------")
-                    target.set_role_hp(-9999)
-                    break
-            continue
-        
+        elif "FEATURE_" in key:
+            # 人物特性
+            # 按顺序: 大师
+            if key == "FEATURE_WARRIOR_MASTER":
+                # 这个buff会衰减, 但层数极大, 每回合结算的时候+3力量
+                buff = {}
+                full_empty_buff(buff)
+                buff["BUFF_SOURCE"].append(role.id)
+                buff["BUFF_TARGET"].append(target.id)
+                buff["BUFF_IS_POSITIVE"] = 1
+                buff["BUFF_IS_DISPELLABLE"] = 0
+                target.add_buff_status(buff_string="FEATURE_WARRIOR_MASTER", add_layer=value, add_buff=buff, add_mode="layer")
+                continue
+                
+            if key == "FEATURE_WARRIOR_SAMURAI":
+                # 这个buff会衰减, 但层数极大, 每回合结算的时候+3力量
+                buff = {}
+                full_empty_buff(buff)
+                buff["BUFF_SOURCE"].append(role.id)
+                buff["BUFF_TARGET"].append(target.id)
+                buff["BUFF_IS_POSITIVE"] = 1
+                buff["BUFF_IS_DISPELLABLE"] = 0
+                target.add_buff_status(buff_string="FEATURE_WARRIOR_SAMURAI", add_layer=value, add_buff=buff, add_mode="layer")
+                continue
+            
     # ------------------------------------------------------
     return
 
@@ -692,7 +739,7 @@ def get_hit_result(role, target):
     # 结果初始化
     hit_result = False
     blind_result = False
-    string = "%闪避%"
+    string = "%闪避%: "
     # 致盲结算
     if role.is_buffed("BLIND"):
         # 获取随机数
@@ -747,7 +794,7 @@ def get_harm_result(role, target, value):
     harm_result = value
     is_harm_defended = False
     defend_index = 0
-    string = "%格挡%"
+    string = "%格挡%: "
     
     # 格挡结算
     if target.is_defending():

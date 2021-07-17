@@ -34,6 +34,7 @@ def is_battle_end(input_pool):
         return True
     return False
 
+
 def input_action_string():
     action_invalid = True
     # 循环要求输入
@@ -46,6 +47,14 @@ def input_action_string():
             action_invalid = False
     return action_string
 
+def init_role_feature(pool):
+    """
+    整局游戏开始时, 角色被动初始化
+    """
+    
+    for role in pool[::-1]:
+        exert_effect(role, step_content=role.feature)
+    return
 
 def main_round(input_pool, round=0):
 
@@ -61,11 +70,13 @@ def main_round(input_pool, round=0):
     del input_pool
     gc.collect()
     
+    print("--------------第{0}回合-------------".format(round+1))
     
     # 获取本回合各人的行动
     for role in pool[::-1]:
         # 开始行动
         action = role.get_role_action()
+        print(action.name)
         if not(action==None):
             
             # 存在ACT, 先检查ACT是否不满足发动条件
@@ -77,7 +88,7 @@ def main_round(input_pool, round=0):
             else:
                 # 不满足发动条件, 有动作也不要了,直接给个None回去
                 set_action_from_role(role=role,action=None)
-                string = "{} 不满足 {} 的行动条件, 无法行动, 好逊哦".format(role.nickname, action.name)
+                string = "{} 不满足 {} 的行动条件, 无法行动".format(role.nickname, action.name)
         else:
             string = "{} 没有行动".format(role.nickname)
         print(string)

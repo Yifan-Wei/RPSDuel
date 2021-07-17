@@ -39,6 +39,7 @@ class RoleBase(object):
         # 角色默认状态
         self.status_default = {}
         self.status_default["basic"] = {}
+        self.status_default["last_basic"] = {}
         self.status_default["buff"] = {}
         self.status_default["round"] = {}
         self.status_default["last_round"]={}
@@ -92,7 +93,19 @@ class RoleBase(object):
         
         for basic in basic_list:
             self.status_default["basic"][basic] = 0
+            self.status_default["last_basic"][basic] = 0
+    
+    
+    def print_basic_status(self):
         
+        # 获取需要操作的列表
+        basic_dict = self.status_current["basic"]
+        print("#------------{}的状态--------------".format(self.nickname))
+        string = "HP: {0}/{1}\nDUR: {2}/{3}\nSTR: {4}".format(self.get_role_hp(),self.get_role_hp(mode="max"),self.get_role_dur(),self.get_role_dur(mode="max"),self.get_role_str())
+        print(string)
+        print("#----------------------------------------")
+
+    
     def init_buff_status(self):
     
         # 初始化所有buff状态
@@ -140,8 +153,8 @@ class RoleBase(object):
         round_list = []
         round_sp_list = []
         # 按顺序:  回合交锋
-        # 作为主动方: 命中, 丢失, 伤害, 防御, 完全防御
         round_list.append("ROUND_HAS_CONFRONTED")
+        # 作为主动方: 命中, 丢失, 伤害, 防御, 完全防御
         round_list.append("ROUND_HAS_HIT")
         round_list.append("ROUND_HAS_HARM")
         round_list.append("ROUND_BEEN_MISSED")
@@ -167,6 +180,10 @@ class RoleBase(object):
             self.status_default["round"][string] = None
             self.status_default["last_round"][string] = None
         
+        # 记录耐力消耗值
+        self.status_default["round"]["ROUND_DURCOST"] = 0
+        self.status_default["last_round"]["ROUND_DURCOST"] = 0
+        # 记录回合开始时的耐力
         
     def suc_round_status(self):
         
@@ -175,20 +192,21 @@ class RoleBase(object):
         # 2.继承上回合的数据到last_round
         # 3.继承默认数据的到round
         
-        #print(self.status_current["last_round"])
-        #print(self.status_current["round"])
-        # 删除冗余的上上个回合行动
+        # 打印
+        # print("{0}上本回合状态:{1}".format(self.nickname,self.status_current["last_basic"]))
+        # print("{0}本回合状态:{1}".format(self.nickname,self.status_current["basic"]))
+        
+        # 删除冗余的上上个回合行动/状态
         del self.status_current["last_round"]["ROUND_ACTION"]
         del self.status_current["last_round"]
+        del self.status_current["last_basic"]
         gc.collect()
         
-        # 继承上回合的数据到last_round
-        # 不确定是不是这样搞的
+        # 继承上回合的数据到last_round/last_basic
         self.status_current["last_round"] = self.status_current["round"]
-        
+        self.status_current["last_basic"] = deepcopy(self.status_current["basic"])
         # 继承默认的开始数据
         self.status_current["round"] = deepcopy(self.status_default["round"])
-        # END
         
     
     def get_role_str(self):
@@ -198,6 +216,7 @@ class RoleBase(object):
         # 当前血量和生命上限
         str = self.status_current["basic"]["ROLE_STR"]
         return(str)
+    
     
     def set_role_str(self, value):      
         
@@ -211,8 +230,10 @@ class RoleBase(object):
         elif value < 0:
             # 削弱力量,力量可以为负数,但结算伤害的时候伤害不能
             self.status_current["basic"]["ROLE_DUR"] = math.ceil(str + value)
-    
-    
+        
+        print("{0}的力量从{1}变更为{2}".format(self.nickname, str, self.status_current["basic"]["ROLE_STR"]))
+        
+        
     def get_role_hp(self,mode="now"):
         """
         获取角色生命值
@@ -222,9 +243,12 @@ class RoleBase(object):
         # 当前血量和生命上限
         hp = self.status_current["basic"]["ROLE_HP"]
         max_hp = self.status_current["basic"]["ROLE_MAX_HP"]
+        last_hp = self.status_current["last_basic"]["ROLE_HP"]
         
         if mode == "max":
             return(max_hp)
+        elif mode == "last":
+            return(last_hp)
         return(hp)
     
     def set_role_hp(self,value,mode="now",bl_recover=False):
@@ -266,17 +290,23 @@ class RoleBase(object):
         
         print("{4}的生命值从{0}/{1}变更为{2}/{3}".format(hp,max_hp,self.status_current["basic"]["ROLE_HP"],self.status_current["basic"]["ROLE_MAX_HP"],self.nickname))
     
+    
     def get_role_dur(self,mode="now"):
         """
         获取角色耐力值
-        输入参数 mode="now"/"max",分别返还status_current["basic"]里面的ROLE_DUR和ROLE_DUR_MAX
+        输入参数 mode="now"/"max"/"last"
+        分别返还status_current["basic"]里面的ROLE_DUR和ROLE_DUR_MAX
+        以及status_current["last_basic"]里面的ROLE_DUR
         """
         # 当前血量和生命上限
         dur = self.status_current["basic"]["ROLE_DUR"]
         max_dur = self.status_current["basic"]["ROLE_MAX_DUR"]
+        last_dur = self.status_current["last_basic"]["ROLE_DUR"]
         
         if mode == "max":
             return(max_dur)
+        elif mode == "last":
+            return(last_dur)
         return(dur)
     
     
@@ -327,6 +357,7 @@ class RoleBase(object):
                 return action
         return None 
     
+    
     def set_round_action(self, action, mode="current"):
         # -----------------------
         # 设置角色当前回合的行动, 省事的小函数
@@ -352,6 +383,13 @@ class RoleBase(object):
         self.status_current["round"]["ROUND_TARGET"] = target_list
         return
         
+    def get_round_durcost(self):
+        # -----------------------
+        # 获取角色当前回合的耐力消耗数, 省事的小函数
+        # -----------------------
+        if "ROUND_DURCOST" in self.status_current["round"].keys():
+            return self.status_current["round"]["ROUND_DURCOST"]
+        return 0
     
     def get_buff_status(self, buff_string):
         """
@@ -545,6 +583,16 @@ class RoleBase(object):
             if len(self.status_current["buff"][buff_string])>0:
                 return True
         return False
+    
+    
+    def is_confronted(self):
+        """
+        判断角色本回合是否交锋过
+        """
+        if "ROUND_HAS_CONFRONTED" in self.status_current["round"]:
+            return self.status_current["round"]["ROUND_HAS_CONFRONTED"]
+        return False
+    
     
     def is_meeting_cost_condition(self):
         """

@@ -11,7 +11,7 @@
 # -------------------------------------------------
 from db.db_role.rolebase import RoleBase
 
-class ROLE_c0001(RoleBase):
+class ROLE_c0002(RoleBase):
 
     def __init__(self, id):
         
@@ -20,11 +20,11 @@ class ROLE_c0001(RoleBase):
         # 角色二维码, 整局游戏唯一的身份标识
         self.id = id
         # 角色编号
-        self.code = "c0001"
+        self.code = "c0002"
         # 所属职业
         self.job = r"战士"
         # 所属流派
-        self.stream = r"大师"
+        self.stream = r"武士"
         # 稀有度
         self.rarity = "Normal"
         
@@ -53,9 +53,9 @@ class ROLE_c0001(RoleBase):
         # 角色当前状态(调用函数初始化)
         self.init_current_status()
         # 角色被动()
-        self.feature = {"FEATURE_WARRIOR_MASTER":65536}
+        self.feature = {"FEATURE_WARRIOR_SAMURAI":65536}
         # 角色说明
-        self.introduction = r"自律带来力量"
+        self.introduction = r"削弱对方耐力获取优势"
         
 if __name__ == "__main__":
     pass
