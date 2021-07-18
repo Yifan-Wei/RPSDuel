@@ -32,29 +32,29 @@ if __name__ == "__main__":
     c = db_role.c0001.ROLE_c0001(r"003")
     pool.append(a)
     pool.append(b)
-    #pool.append(c)
-    
+    # pool.append(c)
+
     a.nickname = r"织田信长"
-    a.status_current["basic"]["ROLE_SPD"]=4
+    a.status_current["basic"]["ROLE_SPD"] = 4
     a.camp = r"织田家"
 
     b.nickname = r"明智光秀"
-    b.status_current["basic"]["ROLE_SPD"]=6
+    b.status_current["basic"]["ROLE_SPD"] = 6
     b.camp = r"叛徒"
     b.ai = True
     
     c.nickname = r"杂鱼小兵"
-    c.status_current["basic"]["ROLE_SPD"]=5
+    c.status_current["basic"]["ROLE_SPD"] = 5
     c.camp = r"叛徒"
     c.ai = True
     
     # 初始化人物特性
     init_role_feature(pool)
     
-    round = 0
+    num_round = 0
     end_flag = False
     # 循环战斗，直到耗尽
-    while (end_flag==False):
+    while not end_flag:
     
         # 循环池中人物状态, 这一步不在main_round里面是因为会把target给洗了
         for role in pool[::-1]:
@@ -66,13 +66,13 @@ if __name__ == "__main__":
         # 灵感阶段
         get_player_target_status(pool)
         # 行动阶段
-        choose_player_action(pool,action_dict=ACTION_DICT)
+        choose_player_action(pool, action_dict=ACTION_DICT)
         # 结算行动
-        pool = main_round(pool, round)
+        pool = main_round(pool, num_round)
         # 跳出判断
         end_flag = is_battle_end(input_pool=pool)
         # 循环
-        round +=1
+        num_round += 1
     
     if a.is_role_alive():
         print("恭喜您获得胜利")

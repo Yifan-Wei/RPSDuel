@@ -11,10 +11,10 @@
 # -------------------------------------------------
 from db.db_act.actionbase import ActionBase
 
+
 class ACTION_a0009(ActionBase):
 
     def __init__(self):
-        
         # 继承父类构造
         ActionBase.__init__(self)
         # 行动编号,需要与文件名一致
@@ -48,8 +48,8 @@ class ACTION_a0009(ActionBase):
         # STEP 1
         step = {}
         step["harmful"] = False
-        step["condition"] = {"COM_ACT_COND":1}
-        step["content"] = {"GET_BUFF_DEFENDING":50, "GET_BUFF_DEFENDING_BEATBACK":1}
+        step["condition"] = {"COM_ACT_COND": 1}
+        step["content"] = {"GET_BUFF_DEFENDING": 50, "GET_BUFF_DEFENDING_BEATBACK": 1}
         self.content_start_phase.append(step)
         # STEP 2 if there is
         # .......
@@ -63,7 +63,7 @@ class ACTION_a0009(ActionBase):
         # STEP 1
         # STEP 1 TYPE
         step = {}
-        step["harmful"]:False
+        step["harmful"]: False
         self.content_order_phase.append(step)
         # ......
 
@@ -75,9 +75,10 @@ class ACTION_a0009(ActionBase):
         # self.content_ender_phase = []
         # STEP 1
         step = {}
-        step["harmful"]:False
+        step["harmful"]: False
         self.content_ender_phase.append(step)
-        
+
+
 if __name__ == "__main__":
     a = ACTION_a0009()
     a.js_print()
