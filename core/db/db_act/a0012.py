@@ -33,8 +33,10 @@ class ACTION_a0012(ActionBase):
         # ---------------------------------------------
         # 通用技能消耗条件
         self.act_condition["COM_ATK_COND"]= 1
+        # 通用技能锁定条件
+        self.act_condition["COM_TARG_COND"] = 1
         # 通用技能消耗条件
-        self.act_condition["DUR_COST"] = 2
+        self.act_condition["COST_DUR"] = 2
         # ......
 
         # ----------------------------------------------

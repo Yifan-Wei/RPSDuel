@@ -33,8 +33,10 @@ class ACTION_a0066(ActionBase):
         # ---------------------------------------------
         # 通用技能消耗条件
         self.act_condition["COM_COST_COND"]= 1
+        # 通用技能锁定条件
+        self.act_condition["COM_TARG_COND"] = 1
         # 通用技能消耗条件
-        self.act_condition["DUR_COST"] = 3
+        self.act_condition["COST_DUR"] = 3
         # 需要满足耐力大于等于目标耐力+3
         self.act_condition["DUR_ABOVE_TARGET"] = 3
         # ......

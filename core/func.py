@@ -11,41 +11,30 @@
 # v 0.2 7th July weiyifan: add a lot things
 
 # -------------------------------------------
-import gc
+import gc,os,sys
 from db.db_role.rolefunc import *
+from db import *
 
 
-def is_battle_end(input_pool):
-    # 统计剩余阵营数目
-    end_dict = {}
-    cmp = 0
-    for role in input_pool[::-1]:
-        camp = role.camp
-        if camp in end_dict.keys():
-            end_dict[camp]+=1
-        else:
-            end_dict[camp]=1
-    # 打印战局
-    for key, value in end_dict.items():
-        print("{0}阵营残余{1}人".format(key,value))
-        cmp += 1
-    # 跳出条件
-    if (cmp==1):
-        return True
-    return False
+def init_action_dict(path="."):
+    """
+    整局游戏开始时, 用来根据特定文件命名规范寻找action类文件, 创建一个实例化字典
+    """
+    action_dict = {}
+    
+    for root, dirs, files in os.walk(path):
+        for file_name in files:
+            #print(file_name)
+            if  file_name.startswith("a") and file_name.endswith(".py"):
+                action_string = ""
+                try:
+                    action_string = "a" + str(int(file_name.replace(".py","").replace("a",""))).zfill(4)
+                except Exception as e:
+                    pass
+                if action_string != "":
+                    action_dict[action_string] = eval("db_act.{0}.ACTION_{0}()".format(action_string))
+    return action_dict
 
-
-def input_action_string():
-    action_invalid = True
-    # 循环要求输入
-    while action_invalid:
-        print("请输入你的行动")
-        for ii in range(len(strategy_list)):
-            print("##{0}={1}".format(strategy_list[ii],name_list[ii]))
-        action_string = input()
-        if action_string in strategy_list:
-            action_invalid = False
-    return action_string
 
 def init_role_feature(pool):
     """
@@ -55,6 +44,131 @@ def init_role_feature(pool):
     for role in pool[::-1]:
         exert_effect(role, step_content=role.feature)
     return
+
+
+def choose_player_target(pool):
+    """
+    测试用, 用来让玩家输入本回合行动
+    循环询问所有玩家的行动
+    目的是获得本回合目标和本回合行动
+    """
+    for role in pool[::-1]:
+         
+        # 创建一个目标目录, 包含敌对目标
+        target_list_tmp = []
+        target_string = None
+        target_true = None
+        for target in pool:
+            if target!=role:
+                target_list_tmp.append(target)
+        if not(role.ai):
+            # -----------这个循环是给玩家的----------
+            # 循环要求输入目标, 完成目标输入后循环完成
+            target_invalid = True
+            while target_invalid:
+                # 先让玩家从pool里选目标
+                print("请选择本轮的锁定目标")
+                kk = 0
+                print("0: 无锁定目标")
+                for target in target_list_tmp[::-1]:
+                    kk+=1
+                    print("{0}: 锁定-{1}".format(kk,target.nickname))
+                input_string = input()
+                try:
+                    target_string = int(input_string)-1
+                except :
+                    pass
+                if target_string != None:
+                    if target_string < 0:
+                        target_true = []
+                    elif target_string < len(target_list_tmp):
+                        target_true = [target_list_tmp[target_string]]
+                    else:
+                        print("ERROR-错误输入")
+                # 确定目标, 可以跳出了
+                if target_true != None:
+                    #print(target_true)
+                    target_invalid = False
+                    role.set_round_target(target_true)
+        else:
+            # -----------这个是给电脑的逻辑------------
+            # 随便写个AI, 电脑耐力为0的时候只会无锁定
+            if role.get_role_dur()!=0:
+                if random.randint(1,1000)%2==0:
+                    target = []
+                else:
+                    target = [random.choice(target_list_tmp)]
+            else:
+                target = []
+            role.set_round_target(target)
+        
+        del target_list_tmp
+        gc.collect()
+
+
+def get_player_target_status(pool):
+    num_be_targeted = 0
+    for role in pool[::-1]:
+        if not(role.ai):
+            for target in pool[::-1]:
+                if (role!=target) and (role in target.get_round_target()):
+                    num_be_targeted +=1
+            if num_be_targeted==0:
+                print("灵感: 本回合未被锁定")
+            else:
+                print("灵感: 本回合共有{0}人锁定你".format(num_be_targeted))
+
+            
+def choose_player_action(pool=[],action_dict={}):
+    
+    for role in pool[::-1]:
+        # 根据这个目标开始挑选行动
+        action_list_tmp = []
+        action = None
+        for key, value in action_dict.items():
+            # 查询列表里面的行动符不符合当前角色的条件
+            if is_qualified_to_act(role=role, condition=value.act_condition):
+                # 把可以使用的加入列表
+                action_list_tmp.append(value)
+                
+        if action_list_tmp != []:
+            if not(role.ai):
+                # -----------这个循环是给玩家的----------
+                # 循环要求输入目标, 完成目标输入后循环完成
+                # 循环要求输入
+                action_invalid = True
+                while action_invalid:
+                    kk = 0
+                    for action in action_list_tmp:
+                        kk += 1
+                        print("{0}: {1}".format(kk, action.name))
+                    input_string = input("{}的行动是: ".format(role.nickname))
+                    try:
+                        action = action_list_tmp[int(input_string)-1]
+                    except Exception as e:
+                        pass
+                    if action != None:
+                        action_invalid = False
+                # ---------------------------------------
+            else:
+                action = random.choice(action_list_tmp)   
+        else:
+            print("本回合{}无可用行动".format(role.nickname))
+        
+        # 设置
+        # -----------------------------------------------------------------
+        if action != None:
+            action_string = action.code
+            action_tmp = eval("db_act.{0}.ACTION_{0}()".format(action_string))
+            role.set_round_action(action_tmp)
+        else:
+            role.set_round_action(None)
+            role.set_round_target([])
+            
+        # 用完了list_tmp删掉
+        del action_list_tmp
+        gc.collect()
+
 
 def main_round(input_pool, round=0):
 
@@ -76,15 +190,17 @@ def main_round(input_pool, round=0):
     for role in pool[::-1]:
         # 开始行动
         action = role.get_role_action()
-        print(action.name)
         if not(action==None):
             
             # 存在ACT, 先检查ACT是否不满足发动条件
             # 这种情况理应当不会发生, 因为选择行动的时候就应该做这个判断了, 但是还没写这个
             # condition 是个字典
             if is_qualified_to_act(role=role, condition=action.act_condition):
-                string = "{0} 满足条件, 开始行动: {1}".format(role.nickname, action.name)
-                
+                target = role.get_round_target()
+                if target == []:
+                    string = "{0} 进行行动: {1}".format(role.nickname, action.name)
+                else:
+                    string = "{0} 锁定{2} 进行行动: {1}".format(role.nickname, action.name, target[0].nickname)
             else:
                 # 不满足发动条件, 有动作也不要了,直接给个None回去
                 set_action_from_role(role=role,action=None)
@@ -92,6 +208,14 @@ def main_round(input_pool, round=0):
         else:
             string = "{} 没有行动".format(role.nickname)
         print(string)
+    
+    # 这里再来一遍循环是为了让判断和结算独立(不会出现判断+结算导致另外一个判断失效的情况)
+    # 结算行动COST, 未来将上面的部分移出之后, 这个部分是整个的开头
+    for role in pool[::-1]:
+        action = role.get_role_action()
+        if not(action==None):
+            # 现在结算流程单独处理
+            trig_action_cost(role=role,condition=action.act_condition)
     
     # 起始阶段
     for role in pool[::-1]:
@@ -228,3 +352,25 @@ def main_round(input_pool, round=0):
     
     
     return pool
+    
+    
+def is_battle_end(input_pool):
+    # 统计剩余阵营数目
+    end_dict = {}
+    cmp = 0
+    for role in input_pool[::-1]:
+        camp = role.camp
+        if camp in end_dict.keys():
+            end_dict[camp]+=1
+        else:
+            end_dict[camp]=1
+    # 打印战局
+    for key, value in end_dict.items():
+        print("{0}阵营残余{1}人".format(key,value))
+        cmp += 1
+    # 跳出条件
+    if (cmp==1):
+        return True
+    return False 
+
+    

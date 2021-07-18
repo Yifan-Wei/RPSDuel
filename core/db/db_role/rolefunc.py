@@ -425,11 +425,26 @@ def is_qualified_to_act(role, condition={}):
                 if not role.is_meeting_act_condition():
                     return False
             
+            # 通用锁定条件
+            if key == "COM_TARG_COND":
+                target = role.get_round_target()
+                if target == None:
+                    return False
+                else:
+                    # 无锁定目标, 但要求锁定
+                    if target == [] and value == 1:
+                        return False
+                    # 有锁定目标, 但要求不锁定
+                    if target != [] and value == 0:
+                        return False
+            
             # 通用战斗条件
             if key == "COM_ATK_COND":
                 if not role.is_meeting_atk_condition():
                     return False
             # --------------------------------------
+            
+            
             
         elif "ROUND_" in key:
             # ------------回合指示器----------------
@@ -502,7 +517,7 @@ def is_qualified_to_act(role, condition={}):
             # 这里不能用实时的值, 要用回合开始前的值
             if key == "DUR_ABOVE_TARGET":
                 target = role.get_round_target()[0]
-                if ((role.get_role_dur(mode="last") - target.get_role_dur(mode="last")) < value):
+                if ((role.get_role_dur() - target.get_role_dur()) < value):
                     return False
                     
             # 自身力量-目标力量>=value
@@ -517,12 +532,12 @@ def is_qualified_to_act(role, condition={}):
             #|#
             # --------------结算条件----------------
             # HP消耗, 要求当前HP严格大于消耗HP
-            if key == "HP_COST":
+            if key == "COST_HP":
                 if role.get_role_hp() <= value:
                     return False
             
             # DUR消耗, 要求当前DUR大于等于消耗DUR        
-            if key == "DUR_COST":
+            if key == "COST_DUR":
                 if role.get_role_dur() < value:
                     return False
             # --------------------------------------
@@ -532,27 +547,30 @@ def is_qualified_to_act(role, condition={}):
             # -------------特殊条件-----------------
             # 暂时没有
             # --------------------------------------
-        
-    
-    # 所有条件遍历完成之后, 开始处理结算条件
-    for key, value in condition.items():
-        
-        # --------------结算条件----------------
-        # HP消耗, 已要求当前HP严格大于消耗HP
-        if key =="HP_COST":
-            role.set_role_hp(-1*value)
-        
-        # DUR消耗, 已要求当前DUR大于等于消耗DUR        
-        if key =="DUR_COST":
-            role.set_role_dur(-1*value)
-            #回合指示器: DUR消耗情况
-            role.status_current["round"]["ROUND_DURCOST"]+=value
-        # --------------------------------------
+            pass
         
         
     # 最后return True
     return True 
 
+
+def trig_action_cost(role, condition={}):
+
+    # 所有条件遍历完成之后, 开始处理结算条件
+    for key, value in condition.items():
+        
+        # --------------结算处理----------------
+        # HP消耗, 已要求当前HP严格大于消耗HP
+        if key =="COST_HP":
+            role.set_role_hp(-1*value)
+        
+        # DUR消耗, 已要求当前DUR大于等于消耗DUR        
+        if key =="COST_DUR":
+            role.set_role_dur(-1*value)
+            #回合指示器: DUR消耗情况
+            role.status_current["round"]["ROUND_DURCOST"]+=value
+        # --------------------------------------
+        
 
 def exert_effect_to_role(role, target, spell_effect={}):
     

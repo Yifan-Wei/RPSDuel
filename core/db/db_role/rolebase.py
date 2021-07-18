@@ -34,7 +34,7 @@ class RoleBase(object):
         # 阵营
         self.camp = ""
         # AI
-        self.ai = {}
+        self.ai = False
         
         # 角色默认状态
         self.status_default = {}
